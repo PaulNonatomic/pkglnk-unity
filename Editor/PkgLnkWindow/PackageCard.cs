@@ -119,7 +119,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			{
 				_onBookmarkClicked?.Invoke(this);
 			});
-			_bookmarkButton.text = "\u2606";
+			_bookmarkButton.text = "\uD83D\uDD16";
 			_bookmarkButton.AddToClassList("bookmark-button");
 			_bookmarkButton.style.display = DisplayStyle.None;
 			_bookmarkButton.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
@@ -317,7 +317,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		public void UpdateBookmarkState(bool isBookmarked)
 		{
 			_isBookmarked = isBookmarked;
-			_bookmarkButton.text = isBookmarked ? "\u2605" : "\u2606";
+			_bookmarkButton.text = "\uD83D\uDD16";
 			if (isBookmarked)
 				_bookmarkButton.AddToClassList("bookmark-button-active");
 			else

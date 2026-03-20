@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-03-20
+
+### Added
+- Profile dropdown menu with avatar and username as trigger button
+- Account option in dropdown opens pkglnk.dev account page in browser
+- Sign Out moved into profile dropdown
+
+### Changed
+- Avatar and username now displayed as a pill-shaped profile button
+- Sign Out button replaced with profile dropdown menu
+
 ## [0.3.0] - 2026-03-20
 
 ### Added

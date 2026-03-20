@@ -34,9 +34,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private const float PrefetchViewportMultiplier = 3f;
 
 		// Header
+		private readonly Button _profileButton;
 		private readonly VisualElement _avatarImage;
 		private readonly Label _usernameLabel;
 		private readonly Button _signInButton;
+		private readonly VisualElement _profileDropdown;
+		private readonly Button _accountButton;
 		private readonly Button _signOutButton;
 
 		// Tabs
@@ -135,24 +138,45 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			authRow.AddToClassList("header-auth-row");
 			headerBar.Add(authRow);
 
-			_avatarImage = new VisualElement();
-			_avatarImage.AddToClassList("header-avatar");
-			_avatarImage.style.display = DisplayStyle.None;
-			authRow.Add(_avatarImage);
-
-			_usernameLabel = new Label();
-			_usernameLabel.AddToClassList("header-username");
-			authRow.Add(_usernameLabel);
-
 			_signInButton = new Button(OnSignInClicked);
 			_signInButton.text = "Sign In";
 			_signInButton.AddToClassList("sign-in-button");
 			authRow.Add(_signInButton);
 
+			// Profile button (avatar + username, toggles dropdown)
+			_profileButton = new Button(ToggleProfileDropdown);
+			_profileButton.AddToClassList("profile-button");
+			_profileButton.style.display = DisplayStyle.None;
+			authRow.Add(_profileButton);
+
+			_avatarImage = new VisualElement();
+			_avatarImage.AddToClassList("header-avatar");
+			_profileButton.Add(_avatarImage);
+
+			_usernameLabel = new Label();
+			_usernameLabel.AddToClassList("header-username");
+			_profileButton.Add(_usernameLabel);
+
+			var chevron = new Label("\u25BE");
+			chevron.AddToClassList("profile-chevron");
+			_profileButton.Add(chevron);
+
+			// Profile dropdown
+			_profileDropdown = new VisualElement();
+			_profileDropdown.AddToClassList("profile-dropdown");
+			_profileDropdown.style.display = DisplayStyle.None;
+			authRow.Add(_profileDropdown);
+
+			_accountButton = new Button(OnAccountClicked);
+			_accountButton.text = "Account";
+			_accountButton.AddToClassList("profile-dropdown-item");
+			_profileDropdown.Add(_accountButton);
+
 			_signOutButton = new Button(OnSignOutClicked);
 			_signOutButton.text = "Sign Out";
-			_signOutButton.AddToClassList("sign-out-button");
-			authRow.Add(_signOutButton);
+			_signOutButton.AddToClassList("profile-dropdown-item");
+			_signOutButton.AddToClassList("profile-dropdown-item-danger");
+			_profileDropdown.Add(_signOutButton);
 
 			// Tab bar
 			var tabBar = new VisualElement();
@@ -183,6 +207,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_searchGroup.AddToClassList("search-group");
 			_searchRow.Add(_searchGroup);
 
+			_filterButton = new Button(ToggleFilterDropdown);
+			_filterButton.text = "\u2261";
+			_filterButton.AddToClassList("filter-button");
+			_searchGroup.Add(_filterButton);
+
 			_searchField = new TextField();
 			_searchField.AddToClassList("search-field");
 			_searchField.RegisterValueChangedCallback(OnSearchChanged);
@@ -193,11 +222,6 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_clearSearchButton.AddToClassList("clear-search-button");
 			_clearSearchButton.style.display = DisplayStyle.None;
 			_searchGroup.Add(_clearSearchButton);
-
-			_filterButton = new Button(ToggleFilterDropdown);
-			_filterButton.text = "Filter";
-			_filterButton.AddToClassList("filter-button");
-			_searchRow.Add(_filterButton);
 
 			_filterBadge = new Label();
 			_filterBadge.AddToClassList("filter-badge");
@@ -270,6 +294,16 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			cancelButton.text = "Cancel";
 			cancelButton.AddToClassList("login-card-cancel");
 			loginCard.Add(cancelButton);
+
+			// Click outside profile dropdown to dismiss
+			RegisterCallback<ClickEvent>(evt =>
+			{
+				if (_profileDropdown.style.display != DisplayStyle.Flex) return;
+				if (evt.target is not VisualElement target) return;
+				if (_profileDropdown.Contains(target) || target == _profileDropdown) return;
+				if (_profileButton.Contains(target) || target == _profileButton) return;
+				CloseProfileDropdown();
+			});
 
 			// Lifecycle
 			RegisterCallback<AttachToPanelEvent>(OnAttachToPanel);
@@ -353,6 +387,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private void OnSignOutClicked()
 		{
+			CloseProfileDropdown();
 			PkgLnkAuth.Logout();
 			_bookmarkedIds.Clear();
 			_bookmarksFetched = false;
@@ -376,22 +411,17 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var loggedIn = PkgLnkAuth.IsLoggedIn;
 
 			_signInButton.style.display = loggedIn ? DisplayStyle.None : DisplayStyle.Flex;
-			_signOutButton.style.display = loggedIn ? DisplayStyle.Flex : DisplayStyle.None;
+			_profileButton.style.display = loggedIn ? DisplayStyle.Flex : DisplayStyle.None;
+			_profileDropdown.style.display = DisplayStyle.None;
 
 			if (loggedIn)
 			{
 				var username = PkgLnkAuth.Username;
 				_usernameLabel.text = string.IsNullOrEmpty(username) ? string.Empty : username;
-				_usernameLabel.style.display = string.IsNullOrEmpty(username)
-					? DisplayStyle.None
-					: DisplayStyle.Flex;
-
 				LoadAvatar();
 			}
 			else
 			{
-				_usernameLabel.style.display = DisplayStyle.None;
-				_avatarImage.style.display = DisplayStyle.None;
 				_avatarImage.style.backgroundImage = StyleKeyword.None;
 			}
 		}
@@ -417,6 +447,23 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					_avatarImage.style.display = DisplayStyle.None;
 				}
 			});
+		}
+
+		private void ToggleProfileDropdown()
+		{
+			var isVisible = _profileDropdown.style.display == DisplayStyle.Flex;
+			_profileDropdown.style.display = isVisible ? DisplayStyle.None : DisplayStyle.Flex;
+		}
+
+		private void CloseProfileDropdown()
+		{
+			_profileDropdown.style.display = DisplayStyle.None;
+		}
+
+		private void OnAccountClicked()
+		{
+			CloseProfileDropdown();
+			Application.OpenURL("https://pkglnk.dev/account");
 		}
 
 		// ─── Login Modal ────────────────────────────────────────────────
@@ -491,9 +538,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			SetTabActive(_bookmarksTab, _activeTab == BrowseTab.Bookmarks);
 			SetTabActive(_myPackagesTab, _activeTab == BrowseTab.MyPackages);
 
-			_searchGroup.style.display = _activeTab == BrowseTab.Browse
-				? DisplayStyle.Flex
-				: DisplayStyle.None;
+			_searchGroup.style.display = DisplayStyle.Flex;
 		}
 
 		private void SetTabActive(Button tab, bool active)

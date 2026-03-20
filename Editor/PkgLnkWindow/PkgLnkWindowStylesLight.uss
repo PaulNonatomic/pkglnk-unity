@@ -17,14 +17,6 @@
     color: #022c22;
 }
 
-.header-avatar {
-    border-color: #059669;
-}
-
-.header-username {
-    color: #1e4037;
-}
-
 .sign-in-button {
     background-color: #059669;
 }
@@ -33,10 +25,47 @@
     background-color: #047857;
 }
 
-.sign-out-button {
+.profile-button {
     background-color: rgba(0, 0, 0, 0.04);
-    color: #1e4037;
     border-color: rgba(0, 0, 0, 0.12);
+}
+
+.profile-button:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.header-avatar {
+    border-color: #059669;
+}
+
+.header-username {
+    color: #1e4037;
+}
+
+.profile-chevron {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+.profile-dropdown {
+    background-color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.profile-dropdown-item {
+    color: #1e4037;
+}
+
+.profile-dropdown-item:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.profile-dropdown-item-danger {
+    color: #dc2626;
+}
+
+.profile-dropdown-item-danger:hover {
+    background-color: rgba(220, 38, 38, 0.06);
 }
 
 .tab-bar {
