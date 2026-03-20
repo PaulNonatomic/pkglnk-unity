@@ -1,0 +1,14 @@
+{
+    "name": "com.nonatomic.pkglnk.runtime",
+    "rootNamespace": "Nonatomic.PkgLnk",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
