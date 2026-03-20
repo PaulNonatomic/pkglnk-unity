@@ -161,11 +161,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			chevron.AddToClassList("profile-chevron");
 			_profileButton.Add(chevron);
 
-			// Profile dropdown
+			// Profile dropdown (added to _listView later so it paints above siblings)
 			_profileDropdown = new VisualElement();
 			_profileDropdown.AddToClassList("profile-dropdown");
 			_profileDropdown.style.display = DisplayStyle.None;
-			authRow.Add(_profileDropdown);
 
 			_accountButton = new Button(OnAccountClicked);
 			_accountButton.text = "Account";
@@ -184,7 +183,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_listView.Add(tabBar);
 
 			_browseTab = new Button(() => SwitchTab(BrowseTab.Browse));
-			_browseTab.text = "Browse";
+			_browseTab.text = "Directory";
 			_browseTab.AddToClassList("tab-button");
 			tabBar.Add(_browseTab);
 
@@ -245,8 +244,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			// Filter dropdown (overlays card grid)
 			_filterDropdown = new PackageFilterDropdown(_filterState, OnFiltersChanged);
+			_filterDropdown.SetOnClose(CloseFilterDropdown);
 			_filterDropdown.style.display = DisplayStyle.None;
 			_listView.Add(_filterDropdown);
+
+			// Profile dropdown (overlays everything)
+			_listView.Add(_profileDropdown);
 
 			// Click outside dropdown to dismiss
 			_listView.RegisterCallback<ClickEvent>(evt =>
@@ -350,8 +353,17 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (!_debounceActive) return;
 			if (EditorApplication.timeSinceStartup - _searchDebounceTime < DebounceSeconds) return;
 
-			_debounceActive = false;
-			FetchPackages(true);
+			if (_activeTab == BrowseTab.Browse)
+			{
+				if (_isFetching) return;
+				_debounceActive = false;
+				FetchPackages(true);
+			}
+			else
+			{
+				_debounceActive = false;
+				ApplyFilters();
+			}
 		}
 
 		// ─── Auth ───────────────────────────────────────────────────────
@@ -572,7 +584,15 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_currentQuery = string.Empty;
 			_clearSearchButton.style.display = DisplayStyle.None;
 			_debounceActive = false;
-			FetchPackages(true);
+
+			if (_activeTab == BrowseTab.Browse)
+			{
+				FetchPackages(true);
+			}
+			else
+			{
+				ApplyFilters();
+			}
 		}
 
 		// ─── Data Fetching ──────────────────────────────────────────────
@@ -940,6 +960,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			card.SetInstalling(true);
 
+			var packageId = card.Package.id;
+
 			PackageInstaller.Install(card.Package, (success, error) =>
 			{
 				card.SetInstalling(false);
@@ -947,6 +969,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				if (success)
 				{
 					card.UpdateInstalledState(true);
+
+					_installCounts.TryGetValue(packageId, out var currentCount);
+					_installCounts[packageId] = currentCount + 1;
+					card.UpdateInstallCount(currentCount + 1);
 				}
 				else
 				{
@@ -998,6 +1024,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			_filteredPackages.Clear();
 
+			var query = _currentQuery?.Trim() ?? string.Empty;
+			var hasQuery = query.Length > 0;
+
 			Func<PackageData, bool> isInstalled = PackageInstaller.IsInstalled;
 			Func<string, bool> isBookmarked = _bookmarksFetched
 				? id => _bookmarkedIds.Contains(id)
@@ -1005,19 +1034,24 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			foreach (var pkg in _allPackages)
 			{
-				if (PackageFilterState.Matches(pkg, _filterState, isInstalled, isBookmarked))
-				{
-					_filteredPackages.Add(pkg);
-				}
+				if (!PackageFilterState.Matches(pkg, _filterState, isInstalled, isBookmarked))
+					continue;
+
+				if (hasQuery && !MatchesQuery(pkg, query))
+					continue;
+
+				_filteredPackages.Add(pkg);
 			}
 
 			RebuildFilterOptions();
 			UpdateFilterBadge();
 
-			if (_filteredPackages.Count == 0 && _allPackages.Count > 0 && _filterState.HasActiveFilters)
+			if (_filteredPackages.Count == 0 && _allPackages.Count > 0 && (_filterState.HasActiveFilters || hasQuery))
 			{
 				HideAllPoolCards();
-				ShowStatus("No packages match the current filters.");
+				ShowStatus(hasQuery && !_filterState.HasActiveFilters
+					? "No packages match your search."
+					: "No packages match the current filters.");
 				_cardContainer.style.height = 0;
 			}
 			else if (_filteredPackages.Count > 0)
@@ -1029,6 +1063,26 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			{
 				UpdateLayout();
 			}
+		}
+
+		private static bool MatchesQuery(PackageData pkg, string query)
+		{
+			if (!string.IsNullOrEmpty(pkg.display_name) &&
+			    pkg.display_name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+				return true;
+			if (!string.IsNullOrEmpty(pkg.description) &&
+			    pkg.description.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+				return true;
+			if (!string.IsNullOrEmpty(pkg.git_owner) &&
+			    pkg.git_owner.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+				return true;
+			if (!string.IsNullOrEmpty(pkg.slug) &&
+			    pkg.slug.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+				return true;
+			if (!string.IsNullOrEmpty(pkg.package_json_name) &&
+			    pkg.package_json_name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+				return true;
+			return false;
 		}
 
 		private void RebuildFilterOptions()

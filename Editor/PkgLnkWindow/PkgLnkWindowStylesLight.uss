@@ -134,21 +134,28 @@
     border-color: rgba(5, 150, 105, 0.4);
 }
 
-.bookmark-button {
-    color: rgba(0, 0, 0, 0.2);
-}
-
 .bookmark-button:hover {
-    color: #d97706;
-    background-color: rgba(217, 119, 6, 0.08);
+    background-color: rgba(5, 150, 105, 0.08);
 }
 
-.bookmark-button-active {
-    color: #d97706;
+.bookmark-icon {
+    -unity-background-image-tint-color: rgba(0, 0, 0, 0.2);
 }
 
-.bookmark-button-active:hover {
-    color: #b45309;
+.bookmark-button:hover .bookmark-icon {
+    -unity-background-image-tint-color: #059669;
+}
+
+.bookmark-button-active .bookmark-icon {
+    -unity-background-image-tint-color: #059669;
+}
+
+.bookmark-button-active:hover .bookmark-icon {
+    -unity-background-image-tint-color: #047857;
+}
+
+.owner-avatar {
+    border-color: rgba(0, 0, 0, 0.12);
 }
 
 .owner-name {
@@ -354,6 +361,16 @@
 }
 
 .filter-dropdown-title {
+    color: #022c22;
+}
+
+.filter-close-button {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #6b9080;
+}
+
+.filter-close-button:hover {
+    background-color: rgba(0, 0, 0, 0.08);
     color: #022c22;
 }
 

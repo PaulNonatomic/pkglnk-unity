@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-03-20
+
+### Added
+- Install listener for browser-to-editor communication (localhost HTTP server on port 29120)
+- Website "Install in Unity" button now triggers package installation directly in the editor
+- Owner avatars on package cards (GitHub, GitLab, Bitbucket)
+- Search bar available on all tabs with client-side text filtering for Bookmarks and My Packages
+- Close button on filter dropdown
+- Install count displayed in card footer
+
+### Changed
+- Bookmark icons changed from emoji to image-based assets (bookmark-outline/filled)
+- Filter dropdown made smaller and scrollable with reduced spacing
+- Card images use contain scaling instead of crop to preserve readability
+- Filter button moved inside search field as compact icon
+- Browse tab renamed to Directory
+- Profile dropdown rendered above all siblings for correct layering
+
+### Fixed
+- Image loading race condition when same URL requested multiple times (callback queuing)
+- My Packages tab not loading images due to API response format mismatch
+- Removed unused HandleUserPackagesResponse from API client
+
 ## [0.4.0] - 2026-03-20
 
 ### Added

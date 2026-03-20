@@ -11,7 +11,7 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 	public static class ImageLoader
 	{
 		private static readonly Dictionary<string, Texture2D> Cache = new Dictionary<string, Texture2D>();
-		private static readonly HashSet<string> InFlight = new HashSet<string>();
+		private static readonly Dictionary<string, List<Action<Texture2D>>> Pending = new Dictionary<string, List<Action<Texture2D>>>();
 
 		/// <summary>
 		/// Loads a texture from a URL. Returns cached texture immediately if available.
@@ -37,8 +37,14 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 				return;
 			}
 
-			if (InFlight.Contains(url)) return;
-			InFlight.Add(url);
+			// If already in flight, queue the callback for when it completes
+			if (Pending.TryGetValue(url, out var callbacks))
+			{
+				callbacks.Add(onLoaded);
+				return;
+			}
+
+			Pending[url] = new List<Action<Texture2D>> { onLoaded };
 
 			UnityWebRequest request;
 			UnityWebRequestAsyncOperation operation;
@@ -50,34 +56,34 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			}
 			catch (Exception ex)
 			{
-				InFlight.Remove(url);
+				var pending = Pending[url];
+				Pending.Remove(url);
 				Debug.LogWarning($"[PkgLnk] Failed to load image {url}: {ex.Message}");
-				onLoaded?.Invoke(null);
+				foreach (var cb in pending) cb?.Invoke(null);
 				return;
 			}
+
+			var capturedUrl = url;
 			operation.completed += _ =>
 			{
-				InFlight.Remove(url);
+				Texture2D texture = null;
 
 				if (request.result == UnityWebRequest.Result.Success)
 				{
-					var texture = DownloadHandlerTexture.GetContent(request);
+					texture = DownloadHandlerTexture.GetContent(request);
 					if (texture != null)
 					{
-						Cache[url] = texture;
-						onLoaded?.Invoke(texture);
+						Cache[capturedUrl] = texture;
 					}
-					else
-					{
-						onLoaded?.Invoke(null);
-					}
-				}
-				else
-				{
-					onLoaded?.Invoke(null);
 				}
 
 				request.Dispose();
+
+				if (Pending.TryGetValue(capturedUrl, out var pending))
+				{
+					Pending.Remove(capturedUrl);
+					foreach (var cb in pending) cb?.Invoke(texture);
+				}
 			};
 		}
 

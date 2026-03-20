@@ -36,6 +36,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly VisualElement _topicSection;
 		private readonly List<Button> _topicChips = new List<Button>();
 
+		private Action _onClose;
+
 		public PackageFilterDropdown(PackageFilterState state, Action onChanged)
 		{
 			_state = state;
@@ -57,9 +59,19 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			clearButton.AddToClassList("filter-clear-button");
 			header.Add(clearButton);
 
+			var closeButton = new Button(() => _onClose?.Invoke());
+			closeButton.text = "\u00d7";
+			closeButton.AddToClassList("filter-close-button");
+			header.Add(closeButton);
+
+			// Scrollable content area for filter sections
+			var scrollView = new ScrollView(ScrollViewMode.Vertical);
+			scrollView.AddToClassList("filter-dropdown-scroll");
+			Add(scrollView);
+
 			// Install Status
 			var installSection = CreateSection("Install Status");
-			Add(installSection);
+			scrollView.Add(installSection);
 
 			var installRow = new VisualElement();
 			installRow.AddToClassList("filter-chip-row");
@@ -71,7 +83,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			// Bookmark Status
 			_bookmarkSection = CreateSection("Bookmark Status");
-			Add(_bookmarkSection);
+			scrollView.Add(_bookmarkSection);
 
 			var bookmarkRow = new VisualElement();
 			bookmarkRow.AddToClassList("filter-chip-row");
@@ -88,7 +100,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			// Platform
 			var platformSection = CreateSection("Platform");
-			Add(platformSection);
+			scrollView.Add(platformSection);
 
 			_platformChipRow = new VisualElement();
 			_platformChipRow.AddToClassList("filter-chip-row");
@@ -98,7 +110,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			// Visibility
 			var visibilitySection = CreateSection("Visibility");
-			Add(visibilitySection);
+			scrollView.Add(visibilitySection);
 
 			var visibilityRow = new VisualElement();
 			visibilityRow.AddToClassList("filter-chip-row");
@@ -110,7 +122,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			// Topics
 			_topicSection = CreateSection("Topics");
-			Add(_topicSection);
+			scrollView.Add(_topicSection);
 
 			_topicChipRow = new VisualElement();
 			_topicChipRow.AddToClassList("filter-chip-row");
@@ -118,6 +130,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			Refresh();
 		}
+
+		public void SetOnClose(Action onClose) => _onClose = onClose;
 
 		public void UpdateAvailablePlatforms(IEnumerable<string> platforms)
 		{

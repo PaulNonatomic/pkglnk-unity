@@ -116,7 +116,7 @@
 /* Profile dropdown */
 .profile-dropdown {
     position: absolute;
-    top: 36px;
+    top: 40px;
     right: 12px;
     min-width: 140px;
     background-color: #064e3b;
@@ -125,6 +125,7 @@
     border-radius: 8px;
     padding: 4px;
     overflow: hidden;
+    z-index: 9999;
 }
 
 .profile-dropdown-item {
@@ -288,6 +289,17 @@
     align-items: center;
 }
 
+.owner-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    margin-right: 4px;
+    -unity-background-scale-mode: scale-and-crop;
+    flex-shrink: 0;
+}
+
 .owner-name {
     font-size: 11px;
     color: #6ee7b7;
@@ -306,27 +318,36 @@
 .bookmark-button {
     width: 22px;
     height: 22px;
-    font-size: 14px;
     padding: 0;
     margin-left: 4px;
     border-radius: 4px;
     border-width: 0;
     background-color: rgba(0, 0, 0, 0);
-    color: rgba(110, 231, 183, 0.4);
-    -unity-text-align: middle-center;
+    align-items: center;
+    justify-content: center;
 }
 
 .bookmark-button:hover {
-    color: #fbbf24;
-    background-color: rgba(251, 191, 36, 0.1);
+    background-color: rgba(110, 231, 183, 0.1);
 }
 
-.bookmark-button-active {
-    color: #fbbf24;
+.bookmark-icon {
+    width: 14px;
+    height: 14px;
+    -unity-background-image-tint-color: rgba(110, 231, 183, 0.4);
+    -unity-background-scale-mode: scale-to-fit;
 }
 
-.bookmark-button-active:hover {
-    color: #f59e0b;
+.bookmark-button:hover .bookmark-icon {
+    -unity-background-image-tint-color: #6ee7b7;
+}
+
+.bookmark-button-active .bookmark-icon {
+    -unity-background-image-tint-color: #10b981;
+}
+
+.bookmark-button-active:hover .bookmark-icon {
+    -unity-background-image-tint-color: #059669;
 }
 
 /* Card image area */
@@ -346,7 +367,7 @@
 .card-image {
     width: 100%;
     height: 100%;
-    -unity-background-scale-mode: scale-and-crop;
+    -unity-background-scale-mode: scale-to-fit;
 }
 
 .card-image-placeholder {
@@ -832,26 +853,49 @@
     top: 0;
     left: 0;
     right: 0;
-    max-height: 400px;
+    max-height: 240px;
     background-color: #04352a;
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.1);
     border-radius: 0 0 12px 12px;
-    padding: 12px;
-    overflow: scroll;
+    padding: 10px 12px;
+    overflow: hidden;
+}
+
+.filter-dropdown-scroll {
+    flex-grow: 1;
+}
+
+.filter-close-button {
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    -unity-font-style: bold;
+    padding: 0;
+    border-radius: 6px;
+    border-width: 0;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #6ee7b7;
+    -unity-text-align: middle-center;
+}
+
+.filter-close-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ecfdf5;
 }
 
 .filter-dropdown-header {
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 .filter-dropdown-title {
-    font-size: 13px;
+    font-size: 12px;
     -unity-font-style: bold;
     color: #ecfdf5;
+    flex-grow: 1;
 }
 
 .filter-clear-button {
@@ -871,7 +915,7 @@
 }
 
 .filter-section {
-    margin-bottom: 10px;
+    margin-bottom: 6px;
 }
 
 .filter-section-label {

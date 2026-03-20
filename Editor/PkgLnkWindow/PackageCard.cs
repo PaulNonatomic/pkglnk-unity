@@ -28,8 +28,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		// Real content
 		private readonly VisualElement _cardBody;
+		private readonly VisualElement _ownerAvatar;
 		private readonly Label _ownerLabel;
-		private readonly Label _countBadge;
 		private readonly VisualElement _imageArea;
 		private readonly VisualElement _imageElement;
 		private readonly VisualElement _placeholderIcon;
@@ -41,8 +41,13 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly Label _updatedLabel;
 		private readonly Button _installButton;
 		private readonly Button _bookmarkButton;
+		private readonly VisualElement _bookmarkIcon;
+
+		private static Texture2D _bookmarkOutlineTex;
+		private static Texture2D _bookmarkFilledTex;
 
 		private string _boundImageUrl;
+		private string _boundAvatarUrl;
 		private bool _isInstalled;
 		private bool _isBookmarked;
 		private bool _isGhost = true;
@@ -106,24 +111,43 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			ownerRow.AddToClassList("owner-row");
 			header.Add(ownerRow);
 
+			_ownerAvatar = new VisualElement();
+			_ownerAvatar.AddToClassList("owner-avatar");
+			ownerRow.Add(_ownerAvatar);
+
 			_ownerLabel = new Label();
 			_ownerLabel.AddToClassList("owner-name");
 			ownerRow.Add(_ownerLabel);
 
-			_countBadge = new Label();
-			_countBadge.AddToClassList("install-count-badge");
-			_countBadge.style.display = DisplayStyle.None;
-			header.Add(_countBadge);
+			if (_bookmarkOutlineTex == null)
+			{
+				_bookmarkOutlineTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+					"Packages/com.nonatomic.pkglnk/Editor/Icons/bookmark-outline.png");
+			}
+			if (_bookmarkFilledTex == null)
+			{
+				_bookmarkFilledTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+					"Packages/com.nonatomic.pkglnk/Editor/Icons/bookmark-filled.png");
+			}
 
 			_bookmarkButton = new Button(() =>
 			{
 				_onBookmarkClicked?.Invoke(this);
 			});
-			_bookmarkButton.text = "\uD83D\uDD16";
+			_bookmarkButton.text = string.Empty;
 			_bookmarkButton.AddToClassList("bookmark-button");
 			_bookmarkButton.style.display = DisplayStyle.None;
 			_bookmarkButton.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
 			header.Add(_bookmarkButton);
+
+			_bookmarkIcon = new VisualElement();
+			_bookmarkIcon.AddToClassList("bookmark-icon");
+			_bookmarkIcon.pickingMode = PickingMode.Ignore;
+			if (_bookmarkOutlineTex != null)
+			{
+				_bookmarkIcon.style.backgroundImage = new StyleBackground(_bookmarkOutlineTex);
+			}
+			_bookmarkButton.Add(_bookmarkIcon);
 
 			// Image — persistent element, swap background only
 			_imageArea = new VisualElement();
@@ -187,6 +211,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_updatedLabel = new Label();
 			_updatedLabel.AddToClassList("updated-label");
+			_updatedLabel.text = "0 installs";
 			footer.Add(_updatedLabel);
 
 			_installButton = new Button(() => _onInstallClicked?.Invoke(this));
@@ -203,6 +228,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_isGhost = true;
 			Package = null;
 			_boundImageUrl = null;
+			_boundAvatarUrl = null;
 			_cardBody.style.display = DisplayStyle.None;
 			_ghostBody.style.display = DisplayStyle.Flex;
 			AddToClassList("package-card-ghost");
@@ -226,15 +252,23 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_ownerLabel.text = pkg.git_owner;
 
-			// Badge
-			if (installCount > 0)
+			// Owner avatar — only reload when URL changes
+			var avatarUrl = GetAvatarUrl(pkg.git_platform, pkg.git_owner);
+			if (avatarUrl != _boundAvatarUrl)
 			{
-				_countBadge.text = $"{FormatUtils.FormatCount(installCount)} installs";
-				_countBadge.style.display = DisplayStyle.Flex;
-			}
-			else
-			{
-				_countBadge.style.display = DisplayStyle.None;
+				_boundAvatarUrl = avatarUrl;
+				_ownerAvatar.style.backgroundImage = StyleKeyword.None;
+
+				if (!string.IsNullOrEmpty(avatarUrl))
+				{
+					ImageLoader.Load(avatarUrl, texture =>
+					{
+						if (texture == null || panel == null) return;
+						if (Package != pkg) return;
+
+						_ownerAvatar.style.backgroundImage = new StyleBackground(texture);
+					});
+				}
 			}
 
 			// Image — only reload when URL changes
@@ -295,7 +329,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			// Footer
 			_repoLabel.text = $"{pkg.git_owner}/{pkg.git_repo}";
-			_updatedLabel.text = DateUtils.FormatRelative(pkg.updated_at);
+			_updatedLabel.text = installCount > 0
+				? $"{FormatUtils.FormatCount(installCount)} installs"
+				: "0 installs";
 
 			// Install state
 			_isInstalled = PackageInstaller.IsInstalled(pkg);
@@ -314,10 +350,21 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			UpdateInstalledHighlight();
 		}
 
+		public void UpdateInstallCount(int installCount)
+		{
+			_updatedLabel.text = installCount > 0
+				? $"{FormatUtils.FormatCount(installCount)} installs"
+				: "0 installs";
+		}
+
 		public void UpdateBookmarkState(bool isBookmarked)
 		{
 			_isBookmarked = isBookmarked;
-			_bookmarkButton.text = "\uD83D\uDD16";
+			var tex = isBookmarked ? _bookmarkFilledTex : _bookmarkOutlineTex;
+			if (tex != null)
+			{
+				_bookmarkIcon.style.backgroundImage = new StyleBackground(tex);
+			}
 			if (isBookmarked)
 				_bookmarkButton.AddToClassList("bookmark-button-active");
 			else
@@ -360,6 +407,18 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_installButton.SetEnabled(true);
 				_installButton.RemoveFromClassList("installed-button");
 			}
+		}
+
+		private static string GetAvatarUrl(string platform, string owner)
+		{
+			if (string.IsNullOrEmpty(owner)) return string.Empty;
+
+			return platform switch
+			{
+				"gitlab" => $"https://gitlab.com/uploads/-/system/user/avatar/{owner}/avatar.png",
+				"bitbucket" => $"https://bitbucket.org/account/{owner}/avatar/40/",
+				_ => $"https://github.com/{owner}.png?size=40"
+			};
 		}
 	}
 }

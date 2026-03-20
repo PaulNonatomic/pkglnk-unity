@@ -135,7 +135,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			request.SetRequestHeader("Authorization", $"Bearer {token}");
 
 			var operation = request.SendWebRequest();
-			operation.completed += _ => HandleUserPackagesResponse(request, onComplete);
+			operation.completed += _ => HandleResponse(request, onComplete);
 		}
 
 		/// <summary>
@@ -165,41 +165,6 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				request.Dispose();
 				onComplete?.Invoke(true, null);
 			};
-		}
-
-		private static void HandleUserPackagesResponse(
-			UnityWebRequest request,
-			Action<DirectoryResponse, string> onComplete)
-		{
-			if (request.result != UnityWebRequest.Result.Success)
-			{
-				var error = request.error;
-				request.Dispose();
-				onComplete?.Invoke(null, error);
-				return;
-			}
-
-			DirectoryResponse response;
-
-			try
-			{
-				var json = request.downloadHandler.text;
-				// /api/v1/packages returns { packages: [{...total_installs}], total }
-				// We map it to DirectoryResponse format for consistency
-				response = JsonUtility.FromJson<DirectoryResponse>(json);
-				response.installCounts = new Dictionary<string, int>();
-			}
-			catch (Exception ex)
-			{
-				onComplete?.Invoke(null, $"Parse error: {ex.Message}");
-				return;
-			}
-			finally
-			{
-				request.Dispose();
-			}
-
-			onComplete?.Invoke(response, null);
 		}
 
 		private static string BuildUrl(string query, string topic, int page, int limit)
