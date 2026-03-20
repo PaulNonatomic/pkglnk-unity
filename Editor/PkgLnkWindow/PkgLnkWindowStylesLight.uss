@@ -17,6 +17,10 @@
     color: #022c22;
 }
 
+.header-avatar {
+    border-color: #059669;
+}
+
 .header-username {
     color: #1e4037;
 }

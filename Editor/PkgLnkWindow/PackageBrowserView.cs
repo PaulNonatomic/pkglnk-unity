@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Nonatomic.PkgLnk.Editor.Api;
+using Nonatomic.PkgLnk.Editor.Utils;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -33,6 +34,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private const float PrefetchViewportMultiplier = 3f;
 
 		// Header
+		private readonly VisualElement _avatarImage;
 		private readonly Label _usernameLabel;
 		private readonly Button _signInButton;
 		private readonly Button _signOutButton;
@@ -132,6 +134,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var authRow = new VisualElement();
 			authRow.AddToClassList("header-auth-row");
 			headerBar.Add(authRow);
+
+			_avatarImage = new VisualElement();
+			_avatarImage.AddToClassList("header-avatar");
+			_avatarImage.style.display = DisplayStyle.None;
+			authRow.Add(_avatarImage);
 
 			_usernameLabel = new Label();
 			_usernameLabel.AddToClassList("header-username");
@@ -378,11 +385,38 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_usernameLabel.style.display = string.IsNullOrEmpty(username)
 					? DisplayStyle.None
 					: DisplayStyle.Flex;
+
+				LoadAvatar();
 			}
 			else
 			{
 				_usernameLabel.style.display = DisplayStyle.None;
+				_avatarImage.style.display = DisplayStyle.None;
+				_avatarImage.style.backgroundImage = StyleKeyword.None;
 			}
+		}
+
+		private void LoadAvatar()
+		{
+			var avatarUrl = PkgLnkAuth.AvatarUrl;
+			if (string.IsNullOrEmpty(avatarUrl))
+			{
+				_avatarImage.style.display = DisplayStyle.None;
+				return;
+			}
+
+			ImageLoader.Load(avatarUrl, texture =>
+			{
+				if (texture != null)
+				{
+					_avatarImage.style.backgroundImage = new StyleBackground(texture);
+					_avatarImage.style.display = DisplayStyle.Flex;
+				}
+				else
+				{
+					_avatarImage.style.display = DisplayStyle.None;
+				}
+			});
 		}
 
 		// ─── Login Modal ────────────────────────────────────────────────

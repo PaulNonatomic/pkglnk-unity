@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-03-20
+
+### Added
+- User profile picture displayed next to username in header when logged in
+- Avatar loaded from GitHub OAuth profile via pkglnk.dev auth callback
+
 ## [0.2.0] - 2026-03-20
 
 ### Added

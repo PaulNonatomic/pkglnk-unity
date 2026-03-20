@@ -53,6 +53,17 @@
     align-items: center;
 }
 
+.header-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 12px;
+    border-width: 2px;
+    border-color: #10b981;
+    margin-right: 6px;
+    -unity-background-scale-mode: scale-and-crop;
+    flex-shrink: 0;
+}
+
 .header-username {
     font-size: 11px;
     color: #a7f3d0;
