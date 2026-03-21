@@ -20,6 +20,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		private static readonly string[] AllowedOrigins =
 		{
 			"https://pkglnk.dev",
+			"https://www.pkglnk.dev",
 			"http://localhost:5173",
 			"http://localhost:4173",
 			"http://localhost:3000"
