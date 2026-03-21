@@ -33,6 +33,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		private static HttpListener _listener;
 		private static Thread _listenerThread;
+		private static volatile bool _installDispatched;
 
 		static PkgLnkInstallListener()
 		{
@@ -164,6 +165,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			}
 			catch (Exception ex)
 			{
+				Debug.LogError($"[PkgLnk] Request handler error: {ex.Message}\n{ex.StackTrace}");
 				try
 				{
 					SendJson(response, 500, $"{{\"error\":\"{EscapeJson(ex.Message)}\"}}");
@@ -222,7 +224,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				return;
 			}
 
-			if (PackageInstaller.IsInstalling)
+			if (_installDispatched)
 			{
 				Debug.LogWarning("[PkgLnk] Rejecting — another install already in progress");
 				SendJson(response, 409, "{\"error\":\"install_in_progress\"}");
@@ -230,11 +232,13 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			}
 
 			// Dispatch install to the main thread
+			_installDispatched = true;
 			Debug.Log($"[PkgLnk] Dispatching Client.Add to main thread for: {url}");
 			EditorApplication.delayCall += () =>
 			{
 				Debug.Log($"[PkgLnk] Main thread executing Client.Add({url})");
 				Client.Add(url);
+				_installDispatched = false;
 			};
 
 			SendJson(response, 200, "{\"status\":\"installing\"}");
