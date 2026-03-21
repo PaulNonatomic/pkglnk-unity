@@ -35,9 +35,11 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			if (string.IsNullOrEmpty(slug)) return;
 
 			SessionState.EraseString(SessionKeySlug);
+#if PKGLNK_DEBUG
 			EditorApplication.delayCall += () =>
 				Debug.Log($"[PkgLnk] Install of '{slug}' may have completed during domain reload. " +
 				          "Check Package Manager to confirm.");
+#endif
 		}
 
 		/// <summary>
@@ -215,7 +217,9 @@ namespace Nonatomic.PkgLnk.Editor.Api
 						_onProgress?.Invoke(InstallPhase.Importing);
 					}
 
+#if PKGLNK_DEBUG
 					Debug.Log($"[PkgLnk] Package added: {request.Result.packageId} — awaiting import");
+#endif
 
 					_waitingForImport = true;
 					_importWaitStart = EditorApplication.timeSinceStartup;

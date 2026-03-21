@@ -61,8 +61,10 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			var index = SessionState.GetInt(SessionKeyIndex, 0);
 			Cleanup();
 
+#if PKGLNK_DEBUG
 			EditorApplication.delayCall += () =>
 				Debug.Log($"[PkgLnk] Batch install was interrupted at {index}/{total} during domain reload.");
+#endif
 		}
 
 		/// <summary>

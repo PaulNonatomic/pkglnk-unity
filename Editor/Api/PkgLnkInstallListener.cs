@@ -37,7 +37,6 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		static PkgLnkInstallListener()
 		{
-			Debug.Log("[PkgLnk] PkgLnkInstallListener static constructor called");
 			Start();
 			EditorApplication.quitting += Stop;
 		}
@@ -62,7 +61,9 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			_listenerThread = new Thread(ListenLoop) { IsBackground = true };
 			_listenerThread.Start();
 
+#if PKGLNK_DEBUG
 			Debug.Log($"[PkgLnk] Install listener started on port {Port}");
+#endif
 		}
 
 		private static void Stop()
@@ -123,8 +124,6 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				}
 			}
 
-			Debug.Log($"[PkgLnk] Request Origin: '{requestOrigin}', matched: '{matchedOrigin}'");
-
 			if (!string.IsNullOrEmpty(matchedOrigin))
 			{
 				response.AddHeader("Access-Control-Allow-Origin", matchedOrigin);
@@ -136,11 +135,13 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			try
 			{
 				var path = request.Url.AbsolutePath.TrimEnd('/');
+
+#if PKGLNK_DEBUG
 				Debug.Log($"[PkgLnk] HTTP {request.HttpMethod} {path} from {request.RemoteEndPoint}");
+#endif
 
 				if (request.HttpMethod == "OPTIONS")
 				{
-					Debug.Log("[PkgLnk] Responding 204 to CORS preflight");
 					response.StatusCode = 204;
 					response.Close();
 					return;
@@ -149,7 +150,6 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				switch (path)
 				{
 					case "/ping":
-						Debug.Log("[PkgLnk] Ping received, responding OK");
 						SendJson(response, 200, "{\"status\":\"ok\"}");
 						break;
 
@@ -158,7 +158,6 @@ namespace Nonatomic.PkgLnk.Editor.Api
 						break;
 
 					default:
-						Debug.Log($"[PkgLnk] Unknown path: {path}, responding 404");
 						SendJson(response, 404, "{\"error\":\"not_found\"}");
 						break;
 				}
@@ -179,11 +178,8 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		private static void HandleInstall(HttpListenerRequest request, HttpListenerResponse response)
 		{
-			Debug.Log($"[PkgLnk] /install handler called, method={request.HttpMethod}");
-
 			if (request.HttpMethod != "POST")
 			{
-				Debug.Log($"[PkgLnk] Rejecting non-POST method: {request.HttpMethod}");
 				SendJson(response, 405, "{\"error\":\"method_not_allowed\"}");
 				return;
 			}
@@ -194,8 +190,6 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				body = reader.ReadToEnd();
 			}
 
-			Debug.Log($"[PkgLnk] Request body: {body}");
-
 			var url = ParseUrlFromJson(body);
 
 			if (string.IsNullOrEmpty(url))
@@ -204,8 +198,6 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				SendJson(response, 400, "{\"error\":\"missing_url\"}");
 				return;
 			}
-
-			Debug.Log($"[PkgLnk] Parsed install URL: {url}");
 
 			var urlAllowed = false;
 			foreach (var prefix in AllowedUrlPrefixes)
@@ -233,7 +225,6 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 			// Show confirmation window on the main thread
 			_installDispatched = true;
-			Debug.Log($"[PkgLnk] Showing install confirmation for: {url}");
 			EditorApplication.delayCall += () =>
 			{
 				InstallConfirmWindow.Show(url);

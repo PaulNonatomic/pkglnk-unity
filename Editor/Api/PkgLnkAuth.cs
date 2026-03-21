@@ -165,7 +165,9 @@ namespace Nonatomic.PkgLnk.Editor.Api
 					Token = token;
 					Username = username ?? string.Empty;
 					AvatarUrl = avatarUrl ?? string.Empty;
+#if PKGLNK_DEBUG
 					Debug.Log($"[PkgLnk] Logged in as {username}");
+#endif
 				}
 
 				var callback = _loginCallback;
