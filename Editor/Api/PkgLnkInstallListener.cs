@@ -2,8 +2,8 @@ using System;
 using System.IO;
 using System.Net;
 using System.Threading;
+using Nonatomic.PkgLnk.Editor.PkgLnkWindow;
 using UnityEditor;
-using UnityEditor.PackageManager;
 using UnityEngine;
 
 namespace Nonatomic.PkgLnk.Editor.Api
@@ -231,13 +231,12 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				return;
 			}
 
-			// Dispatch install to the main thread
+			// Show confirmation window on the main thread
 			_installDispatched = true;
-			Debug.Log($"[PkgLnk] Dispatching Client.Add to main thread for: {url}");
+			Debug.Log($"[PkgLnk] Showing install confirmation for: {url}");
 			EditorApplication.delayCall += () =>
 			{
-				Debug.Log($"[PkgLnk] Main thread executing Client.Add({url})");
-				Client.Add(url);
+				InstallConfirmWindow.Show(url);
 				_installDispatched = false;
 			};
 

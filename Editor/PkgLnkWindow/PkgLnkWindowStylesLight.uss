@@ -533,3 +533,13 @@
 .collection-package-desc {
     color: #1e4037;
 }
+
+/* ─── Install Confirm Window (Light) ────────────────────── */
+
+.confirm-slug {
+    color: #059669;
+}
+
+.confirm-url {
+    color: rgba(30, 64, 55, 0.6);
+}
