@@ -17,7 +17,13 @@ namespace Nonatomic.PkgLnk.Editor.Api
 	public static class PkgLnkInstallListener
 	{
 		private const int Port = 29120;
-		private const string AllowedOrigin = "https://pkglnk.dev";
+		private static readonly string[] AllowedOrigins =
+		{
+			"https://pkglnk.dev",
+			"http://localhost:5173",
+			"http://localhost:4173",
+			"http://localhost:3000"
+		};
 		private const string AllowedUrlPrefix = "https://pkglnk.dev/track/";
 
 		private static HttpListener _listener;
@@ -99,8 +105,25 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			var request = context.Request;
 			var response = context.Response;
 
-			// CORS headers on all responses
-			response.AddHeader("Access-Control-Allow-Origin", AllowedOrigin);
+			// CORS headers on all responses — echo back origin if allowed
+			var requestOrigin = request.Headers["Origin"] ?? string.Empty;
+			var matchedOrigin = string.Empty;
+			foreach (var allowed in AllowedOrigins)
+			{
+				if (string.Equals(requestOrigin, allowed, StringComparison.OrdinalIgnoreCase))
+				{
+					matchedOrigin = allowed;
+					break;
+				}
+			}
+
+			Debug.Log($"[PkgLnk] Request Origin: '{requestOrigin}', matched: '{matchedOrigin}'");
+
+			if (!string.IsNullOrEmpty(matchedOrigin))
+			{
+				response.AddHeader("Access-Control-Allow-Origin", matchedOrigin);
+			}
+
 			response.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
 			response.AddHeader("Access-Control-Allow-Headers", "Content-Type");
 
