@@ -18,15 +18,20 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private enum BrowseTab
 		{
 			Browse,
+			Collections,
 			Bookmarks,
 			MyPackages
 		}
+
+		private const string SessionKeyActiveTab = "PkgLnk_ActiveTab";
+		private const string SessionKeyDetailSlug = "PkgLnk_CollectionDetailSlug";
 
 		private const double DebounceSeconds = 0.4;
 		private const int PageSize = 40;
 		private const float MinCardWidth = 280f;
 		private const float CardGap = 8f;
-		private const float FixedCardHeight = 300f;
+		private const float MinCardHeight = 280f;
+		private const float MaxCardHeight = 400f;
 		private const float RowGap = 8f;
 		private const float ContainerPadding = 8f;
 		private const int BufferRows = 2;
@@ -44,6 +49,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		// Tabs
 		private readonly Button _browseTab;
+		private readonly Button _collectionsTab;
 		private readonly Button _bookmarksTab;
 		private readonly Button _myPackagesTab;
 
@@ -62,6 +68,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly ScrollView _scrollView;
 		private readonly VisualElement _cardContainer;
 		private readonly PackageDetailView _detailView;
+		private readonly CollectionDetailView _collectionDetailView;
 		private readonly VisualElement _listView;
 
 		// Login modal
@@ -78,19 +85,39 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private bool _bookmarksFetched;
 		private int _consecutiveEmptyFilterFetches;
 
+		// Cached delegates to avoid allocation in ApplyFilters hot path
+		private readonly Func<PackageData, bool> _isInstalledDelegate = PackageInstaller.IsInstalled;
+		private Func<string, bool> _isBookmarkedDelegate;
+
+		// Collections data
+		private readonly List<CollectionData> _allCollections = new List<CollectionData>();
+		private readonly List<CollectionData> _filteredCollections = new List<CollectionData>();
+		private readonly Dictionary<string, PackageData[]> _collectionPackagesCache = new Dictionary<string, PackageData[]>();
+		private int _collectionsOffset;
+		private bool _collectionsHasMore;
+		private int _collectionsTotalCount;
+
 		// Card pool — fixed size, circular reuse
 		private readonly List<PackageCard> _cardPool = new List<PackageCard>();
 		private readonly HashSet<int> _activePoolIndices = new HashSet<int>();
 
+		// Collection card pool
+		private readonly List<CollectionCard> _collectionCardPool = new List<CollectionCard>();
+		private readonly HashSet<int> _activeCollectionPoolIndices = new HashSet<int>();
+		private int _collectionPoolSize;
+
 		// Layout state
 		private int _columns = 1;
 		private float _cardWidth = MinCardWidth;
+		private float _cardHeight = MinCardHeight;
 		private float _centerOffset;
 		private int _poolSize;
 
 		// Row-range cache — avoids re-running PositionVisibleCards when nothing changed
 		private int _prevFirstRow = -1;
 		private int _prevLastRow = -1;
+		private int _prevCollFirstRow = -1;
+		private int _prevCollLastRow = -1;
 
 		// Paging
 		private string _currentQuery = string.Empty;
@@ -182,19 +209,19 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			tabBar.AddToClassList("tab-bar");
 			_listView.Add(tabBar);
 
-			_browseTab = new Button(() => SwitchTab(BrowseTab.Browse));
-			_browseTab.text = "Directory";
-			_browseTab.AddToClassList("tab-button");
+			var bookmarkTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+				"Packages/com.nonatomic.pkglnk/Editor/Icons/bookmark-outline.png");
+
+			_browseTab = CreateTabButton("Directory", TabIcons.Compass, () => SwitchTab(BrowseTab.Browse));
 			tabBar.Add(_browseTab);
 
-			_bookmarksTab = new Button(() => SwitchTab(BrowseTab.Bookmarks));
-			_bookmarksTab.text = "Bookmarks";
-			_bookmarksTab.AddToClassList("tab-button");
+			_collectionsTab = CreateTabButton("Collections", TabIcons.Folder, () => SwitchTab(BrowseTab.Collections));
+			tabBar.Add(_collectionsTab);
+
+			_bookmarksTab = CreateTabButton("Bookmarks", bookmarkTex, () => SwitchTab(BrowseTab.Bookmarks));
 			tabBar.Add(_bookmarksTab);
 
-			_myPackagesTab = new Button(() => SwitchTab(BrowseTab.MyPackages));
-			_myPackagesTab.text = "My Packages";
-			_myPackagesTab.AddToClassList("tab-button");
+			_myPackagesTab = CreateTabButton("My Packages", TabIcons.Grid, () => SwitchTab(BrowseTab.MyPackages));
 			tabBar.Add(_myPackagesTab);
 
 			// Toolbar row (search + filter)
@@ -266,6 +293,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_detailView.style.display = DisplayStyle.None;
 			Add(_detailView);
 
+			// Collection detail view (hidden initially)
+			_collectionDetailView = new CollectionDetailView(OnBackToList);
+			Add(_collectionDetailView);
+
 			// Login modal (hidden initially)
 			_loginOverlay = new VisualElement();
 			_loginOverlay.AddToClassList("login-overlay");
@@ -314,12 +345,34 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			// Layout and scroll
 			_scrollView.RegisterCallback<GeometryChangedEvent>(_ => UpdateLayout());
+			_scrollView.contentViewport.RegisterCallback<GeometryChangedEvent>(_ => UpdateLayout());
 			_scrollView.verticalScroller.valueChanged += OnScrollChanged;
+
+			// Restore persisted tab
+			var savedTab = SessionState.GetInt(SessionKeyActiveTab, 0);
+			if (Enum.IsDefined(typeof(BrowseTab), savedTab))
+			{
+				_activeTab = (BrowseTab)savedTab;
+			}
 
 			// Initial state
 			UpdateAuthUI();
 			UpdateTabState();
-			FetchPackages(true);
+
+			// Restore collection detail view if we were viewing one before domain reload
+			var savedDetailSlug = SessionState.GetString(SessionKeyDetailSlug, string.Empty);
+			if (!string.IsNullOrEmpty(savedDetailSlug) && _activeTab == BrowseTab.Collections)
+			{
+				ShowCollectionDetail(savedDetailSlug, false);
+			}
+			else if (_activeTab == BrowseTab.Collections)
+			{
+				FetchCollections(true);
+			}
+			else
+			{
+				FetchPackages(true);
+			}
 			FetchBookmarkIds();
 		}
 
@@ -333,7 +386,20 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				}
 			}
 
+			RefreshCollectionCardInstalledState();
+
 			_detailView.RefreshInstalledState();
+			_collectionDetailView.RefreshInstalledState();
+		}
+
+		private void RefreshCollectionCardInstalledState()
+		{
+			foreach (var card in _collectionCardPool)
+			{
+				if (card.style.display != DisplayStyle.Flex || card.Collection == null) continue;
+				if (!_collectionPackagesCache.TryGetValue(card.Collection.slug, out var pkgs)) continue;
+				card.UpdateInstalledState(pkgs);
+			}
 		}
 
 		private void OnAttachToPanel(AttachToPanelEvent evt)
@@ -358,6 +424,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				if (_isFetching) return;
 				_debounceActive = false;
 				FetchPackages(true);
+			}
+			else if (_activeTab == BrowseTab.Collections)
+			{
+				if (_isFetching) return;
+				_debounceActive = false;
+				FetchCollections(true);
 			}
 			else
 			{
@@ -527,13 +599,24 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (_activeTab == tab) return;
 
 			// Auth-required tabs show login modal when not signed in
-			if (tab != BrowseTab.Browse && !PkgLnkAuth.IsLoggedIn)
+			if (tab != BrowseTab.Browse && tab != BrowseTab.Collections && !PkgLnkAuth.IsLoggedIn)
 			{
 				ShowLoginModal(tab);
 				return;
 			}
 
+			// Hide cards from previous tab
+			if (_activeTab == BrowseTab.Collections)
+			{
+				HideAllCollectionPoolCards();
+			}
+			else
+			{
+				HideAllPoolCards();
+			}
+
 			_activeTab = tab;
+			SessionState.SetInt(SessionKeyActiveTab, (int)tab);
 			_currentTopic = string.Empty;
 			_searchField.SetValueWithoutNotify(string.Empty);
 			_currentQuery = string.Empty;
@@ -541,16 +624,53 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_debounceActive = false;
 
 			UpdateTabState();
-			FetchPackages(true);
+
+			if (tab == BrowseTab.Collections)
+			{
+				FetchCollections(true);
+			}
+			else
+			{
+				FetchPackages(true);
+			}
 		}
 
 		private void UpdateTabState()
 		{
 			SetTabActive(_browseTab, _activeTab == BrowseTab.Browse);
+			SetTabActive(_collectionsTab, _activeTab == BrowseTab.Collections);
 			SetTabActive(_bookmarksTab, _activeTab == BrowseTab.Bookmarks);
 			SetTabActive(_myPackagesTab, _activeTab == BrowseTab.MyPackages);
 
 			_searchGroup.style.display = DisplayStyle.Flex;
+
+			// Hide filter button on Collections tab (filters are package-specific)
+			_filterButton.style.display = _activeTab == BrowseTab.Collections
+				? DisplayStyle.None
+				: DisplayStyle.Flex;
+		}
+
+		private static Button CreateTabButton(string label, Texture2D icon, Action onClick)
+		{
+			var button = new Button(onClick);
+			button.text = string.Empty;
+			button.AddToClassList("tab-button");
+
+			var iconElement = new VisualElement();
+			iconElement.AddToClassList("tab-icon");
+			iconElement.pickingMode = PickingMode.Ignore;
+			if (icon != null)
+			{
+				iconElement.style.backgroundImage = new StyleBackground(icon);
+			}
+			button.Add(iconElement);
+
+			var labelElement = new Label(label);
+			labelElement.AddToClassList("tab-label");
+			labelElement.pickingMode = PickingMode.Ignore;
+			button.Add(labelElement);
+
+			return button;
 		}
 
 		private void SetTabActive(Button tab, bool active)
@@ -588,6 +708,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (_activeTab == BrowseTab.Browse)
 			{
 				FetchPackages(true);
+			}
+			else if (_activeTab == BrowseTab.Collections)
+			{
+				FetchCollections(true);
 			}
 			else
 			{
@@ -731,7 +855,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		// ─── Virtual Grid ───────────────────────────────────────────────
 
-		private float RowHeight => FixedCardHeight + RowGap;
+		private float RowHeight => _cardHeight + RowGap;
 
 		private int TotalVirtualRows()
 		{
@@ -747,6 +871,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private void UpdateLayout()
 		{
+			if (_activeTab == BrowseTab.Collections)
+			{
+				UpdateCollectionLayout();
+				return;
+			}
+
 			var containerWidth = _scrollView.contentViewport.resolvedStyle.width;
 			if (float.IsNaN(containerWidth) || containerWidth <= 0) return;
 
@@ -761,13 +891,18 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var totalGridWidth = _columns * _cardWidth + (_columns - 1) * CardGap;
 			_centerOffset = ContainerPadding + Mathf.Floor((availableWidth - totalGridWidth) / 2f);
 
+			// Dynamic card height: fill viewport with whole rows
+			var viewportHeight = _scrollView.contentViewport.resolvedStyle.height;
+			if (float.IsNaN(viewportHeight) || viewportHeight <= 0) viewportHeight = 600f;
+
+			var usableHeight = viewportHeight - ContainerPadding * 2;
+			var fitRows = Mathf.Max(1, Mathf.FloorToInt((usableHeight + RowGap) / (MinCardHeight + RowGap)));
+			_cardHeight = Mathf.Floor((usableHeight - (fitRows - 1) * RowGap) / fitRows);
+			_cardHeight = Mathf.Clamp(_cardHeight, MinCardHeight, MaxCardHeight);
+
 			var totalRows = TotalVirtualRows();
 			var totalHeight = totalRows > 0 ? totalRows * RowHeight - RowGap + ContainerPadding * 2 : 0;
 			_cardContainer.style.height = totalHeight;
-
-			// Pool size = viewport rows + buffer, clamped to what we need
-			var viewportHeight = _scrollView.contentViewport.resolvedStyle.height;
-			if (float.IsNaN(viewportHeight) || viewportHeight <= 0) viewportHeight = 600f;
 			var visibleRowCount = Mathf.CeilToInt(viewportHeight / RowHeight) + BufferRows * 2;
 			var neededPool = visibleRowCount * _columns;
 
@@ -782,6 +917,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private void PositionVisibleCards()
 		{
+			if (_activeTab == BrowseTab.Collections)
+			{
+				PositionVisibleCollectionCards();
+				return;
+			}
+
 			var totalRows = TotalVirtualRows();
 			if (totalRows == 0)
 			{
@@ -793,7 +934,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			var scrollOffset = _scrollView.verticalScroller.value;
 			var viewportHeight = _scrollView.contentViewport.resolvedStyle.height;
-			if (float.IsNaN(viewportHeight) || viewportHeight <= 0) return;
+			if (float.IsNaN(viewportHeight) || viewportHeight <= 0) viewportHeight = 600f;
 
 			var firstRow = Mathf.Max(0,
 				Mathf.FloorToInt((scrollOffset - ContainerPadding) / RowHeight) - BufferRows);
@@ -808,6 +949,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			// Track which pool slots are in use this frame
 			_activePoolIndices.Clear();
 			var totalVirtualSlots = totalRows * _columns;
+			var showBookmark = PkgLnkAuth.IsLoggedIn;
 
 			for (var row = firstRow; row <= lastRow; row++)
 			{
@@ -831,7 +973,6 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 						{
 							_installCounts.TryGetValue(pkg.id, out var installCount);
 							var isBookmarked = _bookmarkedIds.Contains(pkg.id);
-							var showBookmark = PkgLnkAuth.IsLoggedIn;
 							card.Bind(pkg, installCount, isBookmarked, showBookmark);
 						}
 					}
@@ -843,6 +984,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					card.style.top = ContainerPadding + row * RowHeight;
 					card.style.left = _centerOffset + col * (_cardWidth + CardGap);
 					card.style.width = _cardWidth;
+					card.style.height = _cardHeight;
 					card.style.display = DisplayStyle.Flex;
 				}
 			}
@@ -861,28 +1003,39 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			PositionVisibleCards();
 
+			var scrollOffset = _scrollView.verticalScroller.value;
+			var viewportHeight = _scrollView.contentViewport.resolvedStyle.height;
+			if (float.IsNaN(viewportHeight) || viewportHeight <= 0) return;
+
 			// Prefetch: trigger next page well before the user reaches loaded data boundary.
-			// Measure distance from viewport bottom to the last loaded data row (not ghost rows).
-			if (!_isFetching && _hasMore && _activeTab == BrowseTab.Browse)
+			if (!_isFetching && _activeTab == BrowseTab.Browse && _hasMore)
 			{
-				var scrollOffset = _scrollView.verticalScroller.value;
-				var viewportHeight = _scrollView.contentViewport.resolvedStyle.height;
+				var dataRows = _filteredPackages.Count > 0
+					? Mathf.CeilToInt((float)_filteredPackages.Count / Mathf.Max(1, _columns))
+					: 0;
+				var dataBottom = dataRows * RowHeight + ContainerPadding;
+				var viewportBottom = scrollOffset + viewportHeight;
+				var distanceToDataEnd = dataBottom - viewportBottom;
 
-				if (!float.IsNaN(viewportHeight) && viewportHeight > 0)
+				if (distanceToDataEnd < viewportHeight * PrefetchViewportMultiplier)
 				{
-					var dataRows = _filteredPackages.Count > 0
-						? Mathf.CeilToInt((float)_filteredPackages.Count / Mathf.Max(1, _columns))
-						: 0;
-					var dataBottom = dataRows * RowHeight + ContainerPadding;
-					var viewportBottom = scrollOffset + viewportHeight;
-					var distanceToDataEnd = dataBottom - viewportBottom;
+					_currentPage++;
+					FetchPackages(false);
+				}
+			}
+			else if (!_isFetching && _activeTab == BrowseTab.Collections && _collectionsHasMore)
+			{
+				var dataRows = _filteredCollections.Count > 0
+					? Mathf.CeilToInt((float)_filteredCollections.Count / Mathf.Max(1, _columns))
+					: 0;
+				var collectionCardHeight = CollectionCardHeight + RowGap;
+				var dataBottom = dataRows * collectionCardHeight + ContainerPadding;
+				var viewportBottom = scrollOffset + viewportHeight;
+				var distanceToDataEnd = dataBottom - viewportBottom;
 
-					// Fetch when within N viewports of the data boundary
-					if (distanceToDataEnd < viewportHeight * PrefetchViewportMultiplier)
-					{
-						_currentPage++;
-						FetchPackages(false);
-					}
+				if (distanceToDataEnd < viewportHeight * PrefetchViewportMultiplier)
+				{
+					FetchCollections(false);
 				}
 			}
 		}
@@ -932,8 +1085,17 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private void OnBackToList()
 		{
 			_detailView.style.display = DisplayStyle.None;
+			_collectionDetailView.Hide();
+			SessionState.EraseString(SessionKeyDetailSlug);
 			_listView.style.display = DisplayStyle.Flex;
 			RefreshInstalledState();
+
+			// Invalidate row caches so positioning re-runs with existing layout dimensions
+			_prevFirstRow = -1;
+			_prevLastRow = -1;
+			_prevCollFirstRow = -1;
+			_prevCollLastRow = -1;
+			PositionVisibleCards();
 		}
 
 		private void OnTopicClicked(string topic)
@@ -968,6 +1130,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 				if (success)
 				{
+					PackageInstaller.InvalidateInstalledCache();
 					card.UpdateInstalledState(true);
 
 					_installCounts.TryGetValue(packageId, out var currentCount);
@@ -978,7 +1141,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				{
 					Debug.LogError($"[PkgLnk] Failed to install {card.Package.display_name}: {error}");
 				}
-			});
+			}, phase => card.SetInstallPhaseText(phase));
 		}
 
 		private void OnBookmarkClicked(PackageCard card)
@@ -1024,17 +1187,15 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			_filteredPackages.Clear();
 
-			var query = _currentQuery?.Trim() ?? string.Empty;
+			var query = _currentQuery ?? string.Empty;
 			var hasQuery = query.Length > 0;
 
-			Func<PackageData, bool> isInstalled = PackageInstaller.IsInstalled;
-			Func<string, bool> isBookmarked = _bookmarksFetched
-				? id => _bookmarkedIds.Contains(id)
-				: (Func<string, bool>)null;
+			_isBookmarkedDelegate ??= id => _bookmarkedIds.Contains(id);
+			var isBookmarked = _bookmarksFetched ? _isBookmarkedDelegate : null;
 
 			foreach (var pkg in _allPackages)
 			{
-				if (!PackageFilterState.Matches(pkg, _filterState, isInstalled, isBookmarked))
+				if (!PackageFilterState.Matches(pkg, _filterState, _isInstalledDelegate, isBookmarked))
 					continue;
 
 				if (hasQuery && !MatchesQuery(pkg, query))
@@ -1170,6 +1331,321 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_currentPage++;
 				FetchPackages(false);
 			}
+		}
+
+		// ─── Collections ────────────────────────────────────────────────
+
+		private const float CollectionCardHeight = 200f;
+		private const int CollectionPageSize = 20;
+
+		private float CollectionRowHeight => CollectionCardHeight + RowGap;
+
+		private void FetchCollections(bool freshSearch)
+		{
+			if (_isFetching) return;
+
+			if (freshSearch)
+			{
+				_collectionsOffset = 0;
+				_allCollections.Clear();
+				_filteredCollections.Clear();
+				_scrollView.scrollOffset = Vector2.zero;
+				HideStatus();
+			}
+
+			_isFetching = true;
+
+			if (freshSearch)
+			{
+				UpdateCollectionLayout();
+			}
+			else
+			{
+				var totalRows = TotalCollectionVirtualRows();
+				var totalHeight = totalRows > 0 ? totalRows * CollectionRowHeight - RowGap + ContainerPadding * 2 : 0;
+				_cardContainer.style.height = totalHeight;
+				_prevCollFirstRow = -1;
+				_prevCollLastRow = -1;
+			}
+
+			PkgLnkApiClient.FetchCollections(
+				_currentQuery,
+				string.Empty,
+				_collectionsOffset,
+				CollectionPageSize,
+				OnCollectionsResponse);
+		}
+
+		private void OnCollectionsResponse(CollectionsResponse response, string error)
+		{
+			_isFetching = false;
+
+			if (error != null)
+			{
+				HideAllCollectionPoolCards();
+				ShowStatus($"Error: {error}");
+				return;
+			}
+
+			if (response == null)
+			{
+				HideAllCollectionPoolCards();
+				ShowStatus("No response received.");
+				return;
+			}
+
+			_collectionsTotalCount = response.totalCount;
+
+			foreach (var col in response.collections)
+			{
+				_allCollections.Add(col);
+			}
+
+			_collectionsOffset = _allCollections.Count;
+			_collectionsHasMore = _allCollections.Count < _collectionsTotalCount;
+
+			if (_allCollections.Count == 0)
+			{
+				HideAllCollectionPoolCards();
+				ShowStatus("No collections found.");
+				_cardContainer.style.height = 0;
+				return;
+			}
+
+			ApplyCollectionFilters();
+		}
+
+		private void ApplyCollectionFilters()
+		{
+			_filteredCollections.Clear();
+
+			var query = _currentQuery?.Trim() ?? string.Empty;
+			var hasQuery = query.Length > 0;
+
+			foreach (var col in _allCollections)
+			{
+				if (hasQuery && !MatchesCollectionQuery(col, query))
+					continue;
+
+				_filteredCollections.Add(col);
+			}
+
+			if (_filteredCollections.Count == 0 && _allCollections.Count > 0 && hasQuery)
+			{
+				HideAllCollectionPoolCards();
+				ShowStatus("No collections match your search.");
+				_cardContainer.style.height = 0;
+			}
+			else if (_filteredCollections.Count > 0)
+			{
+				HideStatus();
+				UpdateCollectionLayout();
+			}
+			else
+			{
+				UpdateCollectionLayout();
+			}
+		}
+
+		private static bool MatchesCollectionQuery(CollectionData col, string query)
+		{
+			if (!string.IsNullOrEmpty(col.name) &&
+			    col.name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+				return true;
+			if (!string.IsNullOrEmpty(col.description) &&
+			    col.description.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+				return true;
+			if (!string.IsNullOrEmpty(col.slug) &&
+			    col.slug.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+				return true;
+			if (!string.IsNullOrEmpty(col.owner_username) &&
+			    col.owner_username.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+				return true;
+			return false;
+		}
+
+		private int TotalCollectionVirtualRows()
+		{
+			var dataRows = _filteredCollections.Count > 0
+				? Mathf.CeilToInt((float)_filteredCollections.Count / Mathf.Max(1, _columns))
+				: 0;
+
+			if (_collectionsHasMore || _isFetching) return dataRows + GhostRows;
+			if (_filteredCollections.Count == 0 && _isFetching) return GhostRows;
+			return dataRows;
+		}
+
+		private void UpdateCollectionLayout()
+		{
+			var containerWidth = _scrollView.contentViewport.resolvedStyle.width;
+			if (float.IsNaN(containerWidth) || containerWidth <= 0) return;
+
+			_prevCollFirstRow = -1;
+			_prevCollLastRow = -1;
+
+			var availableWidth = containerWidth - ContainerPadding * 2;
+			_columns = Mathf.Max(1, Mathf.FloorToInt(availableWidth / (MinCardWidth + CardGap)));
+			_cardWidth = Mathf.Floor((availableWidth - (_columns - 1) * CardGap) / _columns);
+
+			var totalGridWidth = _columns * _cardWidth + (_columns - 1) * CardGap;
+			_centerOffset = ContainerPadding + Mathf.Floor((availableWidth - totalGridWidth) / 2f);
+
+			var totalRows = TotalCollectionVirtualRows();
+			var totalHeight = totalRows > 0 ? totalRows * CollectionRowHeight - RowGap + ContainerPadding * 2 : 0;
+			_cardContainer.style.height = totalHeight;
+
+			var viewportHeight = _scrollView.contentViewport.resolvedStyle.height;
+			if (float.IsNaN(viewportHeight) || viewportHeight <= 0) viewportHeight = 600f;
+
+			var visibleRowCount = Mathf.CeilToInt(viewportHeight / CollectionRowHeight) + BufferRows * 2;
+			var neededPool = visibleRowCount * _columns;
+
+			if (neededPool > _collectionPoolSize)
+			{
+				EnsureCollectionPoolSize(neededPool);
+				_collectionPoolSize = neededPool;
+			}
+
+			PositionVisibleCollectionCards();
+		}
+
+		private void PositionVisibleCollectionCards()
+		{
+			var totalRows = TotalCollectionVirtualRows();
+			if (totalRows == 0)
+			{
+				HideAllCollectionPoolCards();
+				_prevCollFirstRow = -1;
+				_prevCollLastRow = -1;
+				return;
+			}
+
+			var scrollOffset = _scrollView.verticalScroller.value;
+			var viewportHeight = _scrollView.contentViewport.resolvedStyle.height;
+			if (float.IsNaN(viewportHeight) || viewportHeight <= 0) viewportHeight = 600f;
+
+			var rowHeight = CollectionRowHeight;
+			var firstRow = Mathf.Max(0,
+				Mathf.FloorToInt((scrollOffset - ContainerPadding) / rowHeight) - BufferRows);
+			var lastRow = Mathf.Min(totalRows - 1,
+				Mathf.CeilToInt((scrollOffset + viewportHeight - ContainerPadding) / rowHeight) + BufferRows);
+
+			if (firstRow == _prevCollFirstRow && lastRow == _prevCollLastRow) return;
+			_prevCollFirstRow = firstRow;
+			_prevCollLastRow = lastRow;
+
+			_activeCollectionPoolIndices.Clear();
+			var totalVirtualSlots = totalRows * _columns;
+
+			for (var row = firstRow; row <= lastRow; row++)
+			{
+				for (var col = 0; col < _columns; col++)
+				{
+					var dataIndex = row * _columns + col;
+					if (dataIndex >= totalVirtualSlots) break;
+
+					var poolIndex = dataIndex % _collectionPoolSize;
+					if (poolIndex >= _collectionCardPool.Count) break;
+
+					_activeCollectionPoolIndices.Add(poolIndex);
+					var card = _collectionCardPool[poolIndex];
+
+					if (dataIndex < _filteredCollections.Count)
+					{
+						var colData = _filteredCollections[dataIndex];
+						if (card.Collection != colData)
+						{
+							card.Bind(colData);
+							if (_collectionPackagesCache.TryGetValue(colData.slug, out var pkgs))
+							{
+								card.UpdateInstalledState(pkgs);
+							}
+						}
+					}
+					else
+					{
+						card.ShowGhost();
+					}
+
+					card.style.top = ContainerPadding + row * rowHeight;
+					card.style.left = _centerOffset + col * (_cardWidth + CardGap);
+					card.style.width = _cardWidth;
+					card.style.height = CollectionCardHeight;
+					card.style.display = DisplayStyle.Flex;
+				}
+			}
+
+			for (var i = 0; i < _collectionCardPool.Count; i++)
+			{
+				if (!_activeCollectionPoolIndices.Contains(i))
+				{
+					_collectionCardPool[i].style.display = DisplayStyle.None;
+				}
+			}
+		}
+
+		private void EnsureCollectionPoolSize(int needed)
+		{
+			while (_collectionCardPool.Count < needed)
+			{
+				var card = new CollectionCard(OnCollectionCardClicked, OnCollectionInstallClicked);
+				card.style.display = DisplayStyle.None;
+				_collectionCardPool.Add(card);
+				_cardContainer.Add(card);
+			}
+		}
+
+		private void HideAllCollectionPoolCards()
+		{
+			foreach (var card in _collectionCardPool)
+			{
+				card.style.display = DisplayStyle.None;
+			}
+		}
+
+		private void OnCollectionCardClicked(CollectionCard card)
+		{
+			if (card.Collection == null) return;
+			ShowCollectionDetail(card.Collection.slug, false);
+		}
+
+		private void OnCollectionInstallClicked(CollectionCard card)
+		{
+			if (card.Collection == null || BatchInstaller.IsRunning || PackageInstaller.IsInstalling) return;
+			ShowCollectionDetail(card.Collection.slug, true);
+		}
+
+		private void ShowCollectionDetail(string slug, bool autoInstall)
+		{
+			_listView.style.display = DisplayStyle.None;
+			_collectionDetailView.ShowLoading();
+			SessionState.SetString(SessionKeyDetailSlug, slug);
+
+			PkgLnkApiClient.FetchCollection(slug, (response, error) =>
+			{
+				if (error != null)
+				{
+					_collectionDetailView.ShowError($"Error: {error}");
+					return;
+				}
+
+				if (response == null)
+				{
+					_collectionDetailView.ShowError("No response received.");
+					return;
+				}
+
+				_collectionPackagesCache[slug] = response.packages;
+
+				if (autoInstall)
+				{
+					_collectionDetailView.ShowAndInstallAll(response.collection, response.packages);
+				}
+				else
+				{
+					_collectionDetailView.Show(response.collection, response.packages);
+				}
+			});
 		}
 
 		// ─── Bookmark State ─────────────────────────────────────────────

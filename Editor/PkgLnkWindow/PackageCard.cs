@@ -47,7 +47,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private static Texture2D _bookmarkFilledTex;
 
 		private string _boundImageUrl;
-		private string _boundAvatarUrl;
+		private string _boundAvatarOwner;
+		private string _boundAvatarPlatform;
+		private string _boundOwner;
+		private string _boundRepo;
+		private int _boundInstallCount = -1;
 		private bool _isInstalled;
 		private bool _isBookmarked;
 		private bool _isGhost = true;
@@ -228,7 +232,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_isGhost = true;
 			Package = null;
 			_boundImageUrl = null;
-			_boundAvatarUrl = null;
+			_boundAvatarOwner = null;
+			_boundAvatarPlatform = null;
+			_boundOwner = null;
+			_boundRepo = null;
+			_boundInstallCount = -1;
 			_cardBody.style.display = DisplayStyle.None;
 			_ghostBody.style.display = DisplayStyle.Flex;
 			AddToClassList("package-card-ghost");
@@ -252,13 +260,14 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_ownerLabel.text = pkg.git_owner;
 
-			// Owner avatar — only reload when URL changes
-			var avatarUrl = GetAvatarUrl(pkg.git_platform, pkg.git_owner);
-			if (avatarUrl != _boundAvatarUrl)
+			// Owner avatar — only reload when owner/platform changes
+			if (pkg.git_owner != _boundAvatarOwner || pkg.git_platform != _boundAvatarPlatform)
 			{
-				_boundAvatarUrl = avatarUrl;
+				_boundAvatarOwner = pkg.git_owner;
+				_boundAvatarPlatform = pkg.git_platform;
 				_ownerAvatar.style.backgroundImage = StyleKeyword.None;
 
+				var avatarUrl = GetAvatarUrl(pkg.git_platform, pkg.git_owner);
 				if (!string.IsNullOrEmpty(avatarUrl))
 				{
 					ImageLoader.Load(avatarUrl, texture =>
@@ -327,11 +336,21 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_topicsRow.style.display = visibleTopics > 0 ? DisplayStyle.Flex : DisplayStyle.None;
 
-			// Footer
-			_repoLabel.text = $"{pkg.git_owner}/{pkg.git_repo}";
-			_updatedLabel.text = installCount > 0
-				? $"{FormatUtils.FormatCount(installCount)} installs"
-				: "0 installs";
+			// Footer — skip string allocation when unchanged
+			if (pkg.git_owner != _boundOwner || pkg.git_repo != _boundRepo)
+			{
+				_boundOwner = pkg.git_owner;
+				_boundRepo = pkg.git_repo;
+				_repoLabel.text = $"{pkg.git_owner}/{pkg.git_repo}";
+			}
+
+			if (installCount != _boundInstallCount)
+			{
+				_boundInstallCount = installCount;
+				_updatedLabel.text = installCount > 0
+					? $"{FormatUtils.FormatCount(installCount)} installs"
+					: "0 installs";
+			}
 
 			// Install state
 			_isInstalled = PackageInstaller.IsInstalled(pkg);
@@ -382,6 +401,30 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			else
 			{
 				UpdateButtonDisplay();
+			}
+		}
+
+		/// <summary>
+		/// Updates the install button text based on the current server-reported phase.
+		/// </summary>
+		public void SetInstallPhaseText(InstallPhase phase)
+		{
+			switch (phase)
+			{
+				case InstallPhase.Resolving:
+					_installButton.text = "Resolving...";
+					break;
+				case InstallPhase.Downloading:
+					_installButton.text = "Downloading...";
+					break;
+				case InstallPhase.Importing:
+					_installButton.text = "Importing...";
+					break;
+				case InstallPhase.Complete:
+					_isInstalled = true;
+					UpdateButtonDisplay();
+					UpdateInstalledHighlight();
+					break;
 			}
 		}
 

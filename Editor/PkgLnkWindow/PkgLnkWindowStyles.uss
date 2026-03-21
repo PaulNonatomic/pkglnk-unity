@@ -161,7 +161,9 @@
 }
 
 .tab-button {
-    padding: 8px 16px;
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 14px;
     font-size: 11px;
     color: #6ee7b7;
     background-color: rgba(0, 0, 0, 0);
@@ -169,7 +171,20 @@
     border-bottom-width: 2px;
     border-bottom-color: rgba(0, 0, 0, 0);
     border-radius: 0;
-    -unity-text-align: middle-center;
+}
+
+.tab-icon {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: #6ee7b7;
+}
+
+.tab-label {
+    font-size: 11px;
+    color: #6ee7b7;
 }
 
 .tab-button:hover {
@@ -177,13 +192,37 @@
     background-color: rgba(255, 255, 255, 0.03);
 }
 
+.tab-button:hover .tab-icon {
+    -unity-background-image-tint-color: #a7f3d0;
+}
+
+.tab-button:hover .tab-label {
+    color: #a7f3d0;
+}
+
 .tab-button:disabled {
+    color: rgba(110, 231, 183, 0.3);
+}
+
+.tab-button:disabled .tab-icon {
+    -unity-background-image-tint-color: rgba(110, 231, 183, 0.3);
+}
+
+.tab-button:disabled .tab-label {
     color: rgba(110, 231, 183, 0.3);
 }
 
 .tab-button-active {
     color: #10b981;
     border-bottom-color: #10b981;
+}
+
+.tab-button-active .tab-icon {
+    -unity-background-image-tint-color: #10b981;
+}
+
+.tab-button-active .tab-label {
+    color: #10b981;
 }
 
 /* Search bar */
@@ -254,7 +293,6 @@
 /* Package card */
 .package-card {
     position: absolute;
-    height: 300px;
     overflow: hidden;
     border-radius: 12px;
     padding: 0;
@@ -274,6 +312,7 @@
 
 .card-body {
     padding: 12px;
+    flex-grow: 1;
 }
 
 /* Card header */
@@ -353,7 +392,8 @@
 /* Card image area */
 .card-image-area {
     width: 100%;
-    height: 100px;
+    min-height: 80px;
+    flex-grow: 1;
     border-radius: 8px;
     margin-bottom: 8px;
     background-color: #04352a;
@@ -549,7 +589,8 @@
 }
 
 .ghost-image {
-    height: 100px;
+    min-height: 80px;
+    flex-grow: 1;
     border-radius: 8px;
     background-color: rgba(255, 255, 255, 0.04);
     margin-bottom: 10px;
@@ -965,4 +1006,247 @@
     opacity: 0.5;
     -unity-font-style: italic;
     margin-top: 2px;
+}
+
+/* ─── Collection Card ─────────────────────────────────────────── */
+
+.collection-card {
+    position: absolute;
+    overflow: hidden;
+    border-radius: 12px;
+    padding: 0;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    background-color: #064e3b;
+}
+
+.collection-card:hover {
+    background-color: rgba(16, 185, 129, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.collection-card-ghost {
+    border-color: rgba(255, 255, 255, 0.04);
+    background-color: rgba(6, 78, 59, 0.5);
+}
+
+.collection-name {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: #ecfdf5;
+    margin-top: 6px;
+    margin-bottom: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.collection-description {
+    font-size: 11px;
+    color: #a7f3d0;
+    margin-bottom: 6px;
+    white-space: normal;
+    min-height: 45px;
+    max-height: 45px;
+    overflow: hidden;
+}
+
+.collection-package-count {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #a7f3d0;
+    align-self: center;
+}
+
+.collection-install-button {
+    padding: 0 12px;
+    height: 22px;
+    font-size: 11px;
+}
+
+/* ─── Collection Detail View ──────────────────────────────────── */
+
+.collection-detail {
+    flex-grow: 1;
+    flex-direction: column;
+    padding: 12px;
+    background-color: #022c22;
+}
+
+.collection-detail-owner-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 6px;
+    margin-bottom: 8px;
+}
+
+.collection-detail-owner-row > .detail-owner {
+    margin-bottom: 0;
+    margin-right: 12px;
+}
+
+.collection-detail-count {
+    font-size: 11px;
+    color: #6ee7b7;
+}
+
+.collection-detail-separator {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.08);
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+/* Install All button */
+.install-all-button {
+    height: 36px;
+    border-radius: 8px;
+    font-size: 13px;
+    -unity-font-style: bold;
+    background-color: #10b981;
+    color: #ffffff;
+    border-width: 0;
+    margin-top: 8px;
+    -unity-text-align: middle-center;
+}
+
+.install-all-button:hover {
+    background-color: #059669;
+}
+
+.install-all-button:disabled {
+    background-color: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+    border-width: 1px;
+    border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* Batch cancel button is still used in action row */
+
+.batch-cancel-button {
+    height: 24px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #f87171;
+    border-width: 1px;
+    border-color: rgba(248, 113, 113, 0.2);
+    margin-top: 4px;
+    align-self: flex-start;
+}
+
+.batch-cancel-button:hover {
+    background-color: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
+.batch-cancel-button:disabled {
+    opacity: 0.4;
+}
+
+/* Collection package scroll */
+.collection-package-scroll {
+    flex-grow: 1;
+}
+
+/* Collection action row */
+.collection-action-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.collection-action-row > .batch-cancel-button {
+    margin-left: 8px;
+}
+
+/* Collection package row */
+.collection-package-row {
+    flex-direction: column;
+    padding: 8px 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.04);
+}
+
+.collection-package-row:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+}
+
+.collection-package-row-installed {
+    opacity: 0.8;
+}
+
+.collection-package-top-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.collection-package-info {
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+    margin-right: 8px;
+}
+
+.collection-package-name {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: #ecfdf5;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.collection-package-desc {
+    font-size: 10px;
+    color: #a7f3d0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    margin-top: 1px;
+}
+
+/* Per-row progress bar */
+.row-progress-track {
+    height: 3px;
+    border-radius: 2px;
+    margin-top: 6px;
+    background-color: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.row-progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 2px;
+    background-color: #10b981;
+}
+
+.row-progress-fill-failed {
+    background-color: #ef4444;
+}
+
+.row-spinner {
+    font-size: 11px;
+    color: #6ee7b7;
+    margin-right: 4px;
+    flex-shrink: 0;
+    width: 12px;
+    -unity-text-align: middle-center;
+}
+
+.row-status-label {
+    font-size: 9px;
+    color: #6ee7b7;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.row-status-error {
+    color: #fca5a5;
 }

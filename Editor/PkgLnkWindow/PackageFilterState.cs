@@ -94,10 +94,18 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				if (pkg.topics == null || pkg.topics.Length == 0)
 					return false;
 
-				var pkgTopics = new HashSet<string>(pkg.topics);
 				foreach (var topic in state.SelectedTopics)
 				{
-					if (!pkgTopics.Contains(topic)) return false;
+					var found = false;
+					foreach (var t in pkg.topics)
+					{
+						if (string.Equals(t, topic, StringComparison.Ordinal))
+						{
+							found = true;
+							break;
+						}
+					}
+					if (!found) return false;
 				}
 			}
 

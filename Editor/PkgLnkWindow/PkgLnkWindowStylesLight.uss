@@ -77,18 +77,50 @@
     color: #6b9080;
 }
 
+.tab-icon {
+    -unity-background-image-tint-color: #6b9080;
+}
+
+.tab-label {
+    color: #6b9080;
+}
+
 .tab-button:hover {
     color: #1e4037;
     background-color: rgba(0, 0, 0, 0.04);
+}
+
+.tab-button:hover .tab-icon {
+    -unity-background-image-tint-color: #1e4037;
+}
+
+.tab-button:hover .tab-label {
+    color: #1e4037;
 }
 
 .tab-button:disabled {
     color: rgba(107, 144, 128, 0.4);
 }
 
+.tab-button:disabled .tab-icon {
+    -unity-background-image-tint-color: rgba(107, 144, 128, 0.4);
+}
+
+.tab-button:disabled .tab-label {
+    color: rgba(107, 144, 128, 0.4);
+}
+
 .tab-button-active {
     color: #059669;
     border-bottom-color: #059669;
+}
+
+.tab-button-active .tab-icon {
+    -unity-background-image-tint-color: #059669;
+}
+
+.tab-button-active .tab-label {
+    color: #059669;
 }
 
 .search-row {
@@ -408,4 +440,96 @@
 
 .filter-section-hint {
     color: #6b9080;
+}
+
+/* ─── Collection Card ─────────────────────────────────────────── */
+
+.collection-card {
+    background-color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.collection-card:hover {
+    background-color: rgba(5, 150, 105, 0.04);
+    border-color: rgba(0, 0, 0, 0.25);
+}
+
+.collection-card-ghost {
+    border-color: rgba(0, 0, 0, 0.06);
+    background-color: rgba(247, 253, 249, 0.7);
+}
+
+.collection-name {
+    color: #022c22;
+}
+
+.collection-description {
+    color: #1e4037;
+}
+
+.collection-package-count {
+    background-color: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #1e4037;
+}
+
+/* ─── Collection Detail View ──────────────────────────────────── */
+
+.collection-detail {
+    background-color: #ffffff;
+}
+
+.collection-detail-count {
+    color: #6b9080;
+}
+
+.collection-detail-separator {
+    background-color: rgba(0, 0, 0, 0.08);
+}
+
+.install-all-button {
+    background-color: #059669;
+}
+
+.install-all-button:hover {
+    background-color: #047857;
+}
+
+.row-progress-track {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+.row-spinner {
+    color: #059669;
+}
+
+.row-status-label {
+    color: #1e4037;
+}
+
+.batch-cancel-button {
+    background-color: rgba(0, 0, 0, 0.04);
+    border-color: rgba(220, 38, 38, 0.2);
+    color: #dc2626;
+}
+
+.batch-cancel-button:hover {
+    background-color: rgba(220, 38, 38, 0.06);
+    border-color: rgba(220, 38, 38, 0.4);
+}
+
+.collection-package-row {
+    border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.collection-package-row:hover {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+.collection-package-name {
+    color: #022c22;
+}
+
+.collection-package-desc {
+    color: #1e4037;
 }

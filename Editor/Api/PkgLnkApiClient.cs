@@ -12,6 +12,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 	public static class PkgLnkApiClient
 	{
 		private const string BaseUrl = "https://pkglnk.dev/api/directory";
+		private const string CollectionsUrl = "https://pkglnk.dev/api/collections";
 		private const string ApiV1Url = "https://pkglnk.dev/api/v1";
 		private const string UserAgent = "pkglnk-unity/0.1";
 
@@ -165,6 +166,84 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				request.Dispose();
 				onComplete?.Invoke(true, null);
 			};
+		}
+
+		// ─── Collections ────────────────────────────────────────────────
+
+		/// <summary>
+		/// Fetches a page of public collections.
+		/// </summary>
+		public static void FetchCollections(
+			string query,
+			string tag,
+			int offset,
+			int limit,
+			Action<CollectionsResponse, string> onComplete)
+		{
+			var url = $"{CollectionsUrl}?offset={offset}&limit={limit}";
+
+			if (!string.IsNullOrWhiteSpace(query))
+			{
+				url += $"&q={Uri.EscapeDataString(query)}";
+			}
+
+			if (!string.IsNullOrWhiteSpace(tag))
+			{
+				url += $"&tag={Uri.EscapeDataString(tag)}";
+			}
+
+			var request = UnityWebRequest.Get(url);
+			request.SetRequestHeader("User-Agent", UserAgent);
+
+			var operation = request.SendWebRequest();
+			operation.completed += _ => HandleJsonResponse(request, onComplete);
+		}
+
+		/// <summary>
+		/// Fetches a single collection by slug, including its packages.
+		/// </summary>
+		public static void FetchCollection(
+			string slug,
+			Action<CollectionDetailResponse, string> onComplete)
+		{
+			var url = $"{CollectionsUrl}/{Uri.EscapeDataString(slug)}";
+			var request = UnityWebRequest.Get(url);
+			request.SetRequestHeader("User-Agent", UserAgent);
+
+			var operation = request.SendWebRequest();
+			operation.completed += _ => HandleJsonResponse(request, onComplete);
+		}
+
+		private static void HandleJsonResponse<T>(
+			UnityWebRequest request,
+			Action<T, string> onComplete)
+		{
+			if (request.result != UnityWebRequest.Result.Success)
+			{
+				var error = request.error;
+				request.Dispose();
+				onComplete?.Invoke(default, error);
+				return;
+			}
+
+			T response;
+
+			try
+			{
+				var json = request.downloadHandler.text;
+				response = JsonUtility.FromJson<T>(json);
+			}
+			catch (Exception ex)
+			{
+				onComplete?.Invoke(default, $"Parse error: {ex.Message}");
+				return;
+			}
+			finally
+			{
+				request.Dispose();
+			}
+
+			onComplete?.Invoke(response, null);
 		}
 
 		private static string BuildUrl(string query, string topic, int page, int limit)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text;
 using UnityEditor;
 using UnityEditor.PackageManager;
@@ -18,6 +19,11 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		private static AddRequest _pendingRequest;
 		private static Action<bool, string> _onComplete;
+		private static Action<InstallPhase> _onProgress;
+		private static bool _waitingForImport;
+		private static double _importWaitStart;
+		private static bool _sawCompiling;
+		private const double ImportWarmupDelay = 0.5;
 
 		/// <summary>
 		/// Re-attaches after domain reload if an install was in progress.
@@ -55,34 +61,115 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			return sb.ToString();
 		}
 
+		private static HashSet<string> _installedNamesCache;
+		private static HashSet<string> _installedSlugsCache;
+		private static HashSet<string> _installedReposCache;
+		private static double _installedCacheTime;
+		private const double InstalledCacheTtl = 2.0;
+		private const string TrackUrlPrefix = "https://pkglnk.dev/track/";
+		private const string GitHubUrlPrefix = "https://github.com/";
+
 		/// <summary>
-		/// Returns true if the package is already installed, matched by package_json_name.
+		/// Returns true if the package is already installed.
+		/// Matches by package_json_name, pkglnk tracking slug, or git owner/repo.
 		/// </summary>
 		public static bool IsInstalled(PackageData pkg)
 		{
-			if (string.IsNullOrEmpty(pkg.package_json_name)) return false;
+			RefreshInstalledCache();
 
-			var installed = PackageInfo.GetAllRegisteredPackages();
-			foreach (var info in installed)
+			if (!string.IsNullOrEmpty(pkg.package_json_name) &&
+			    _installedNamesCache.Contains(pkg.package_json_name))
 			{
-				if (string.Equals(info.name, pkg.package_json_name, StringComparison.OrdinalIgnoreCase))
-				{
-					return true;
-				}
+				return true;
+			}
+
+			if (!string.IsNullOrEmpty(pkg.slug) &&
+			    _installedSlugsCache.Contains(pkg.slug))
+			{
+				return true;
+			}
+
+			if (!string.IsNullOrEmpty(pkg.git_owner) && !string.IsNullOrEmpty(pkg.git_repo) &&
+			    _installedReposCache.Contains($"{pkg.git_owner}/{pkg.git_repo}"))
+			{
+				return true;
 			}
 
 			return false;
 		}
 
-		/// <summary>Returns true if any install is currently in progress.</summary>
+		/// <summary>Forces the installed-packages cache to refresh on next check.</summary>
+		public static void InvalidateInstalledCache()
+		{
+			_installedCacheTime = 0;
+		}
+
+		private static void RefreshInstalledCache()
+		{
+			var now = EditorApplication.timeSinceStartup;
+			if (_installedNamesCache != null && now - _installedCacheTime < InstalledCacheTtl) return;
+
+			_installedNamesCache ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			_installedSlugsCache ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			_installedReposCache ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+			_installedNamesCache.Clear();
+			_installedSlugsCache.Clear();
+			_installedReposCache.Clear();
+
+			var installed = PackageInfo.GetAllRegisteredPackages();
+			foreach (var info in installed)
+			{
+				_installedNamesCache.Add(info.name);
+				ParseGitUrl(info.packageId);
+			}
+
+			_installedCacheTime = now;
+		}
+
+		private static void ParseGitUrl(string packageId)
+		{
+			var atIndex = packageId.IndexOf('@');
+			if (atIndex < 0) return;
+
+			var url = packageId.Substring(atIndex + 1);
+
+			if (url.StartsWith(TrackUrlPrefix, StringComparison.OrdinalIgnoreCase))
+			{
+				var slug = StripGitSuffix(url.Substring(TrackUrlPrefix.Length));
+				if (!string.IsNullOrEmpty(slug)) _installedSlugsCache.Add(slug);
+			}
+
+			if (url.StartsWith(GitHubUrlPrefix, StringComparison.OrdinalIgnoreCase))
+			{
+				var path = StripGitSuffix(url.Substring(GitHubUrlPrefix.Length));
+				if (!string.IsNullOrEmpty(path) && path.Contains("/"))
+				{
+					_installedReposCache.Add(path);
+				}
+			}
+		}
+
+		private static string StripGitSuffix(string value)
+		{
+			if (value.EndsWith(".git")) value = value.Substring(0, value.Length - 4);
+			var q = value.IndexOf('?');
+			if (q >= 0) value = value.Substring(0, q);
+			var h = value.IndexOf('#');
+			if (h >= 0) value = value.Substring(0, h);
+			return value;
+		}
+
+		/// <summary>Returns true if any install is currently in progress (including import wait).</summary>
 		public static bool IsInstalling =>
-			!string.IsNullOrEmpty(SessionState.GetString(SessionKeySlug, string.Empty));
+			_waitingForImport || !string.IsNullOrEmpty(SessionState.GetString(SessionKeySlug, string.Empty));
 
 		/// <summary>
 		/// Begins installation. <paramref name="onComplete"/> receives (success, errorMessage).
+		/// Optionally pass <paramref name="onProgress"/> to receive real-time phase updates
+		/// from the pkglnk.dev tracking proxy.
 		/// Only call when <see cref="IsInstalling"/> is false.
 		/// </summary>
-		public static void Install(PackageData pkg, Action<bool, string> onComplete)
+		public static void Install(PackageData pkg, Action<bool, string> onComplete, Action<InstallPhase> onProgress = null)
 		{
 			if (IsInstalling)
 			{
@@ -92,42 +179,100 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 			var url = BuildInstallUrl(pkg);
 			_onComplete = onComplete;
+			_onProgress = onProgress;
 			_pendingRequest = Client.Add(url);
 
 			SessionState.SetString(SessionKeySlug, pkg.slug);
+
+			// Start server-side progress tracking if callback provided
+			if (_onProgress != null)
+			{
+				var installId = InstallProgressTracker.GenerateInstallId();
+				InstallProgressTracker.NotifyInstallStart(pkg.slug, installId);
+				InstallProgressTracker.StartTracking(installId, _onProgress);
+			}
+
 			EditorApplication.update += PollInstall;
 		}
 
 		private static void PollInstall()
 		{
-			if (_pendingRequest == null)
+			// Phase 1: wait for Client.Add to complete
+			if (_pendingRequest != null)
 			{
+				if (!_pendingRequest.IsCompleted) return;
+
+				var request = _pendingRequest;
+				_pendingRequest = null;
+				SessionState.EraseString(SessionKeySlug);
+
+				if (request.Status == StatusCode.Success)
+				{
+					var hadProgress = _onProgress != null;
+					if (hadProgress)
+					{
+						InstallProgressTracker.StopWithComplete();
+						_onProgress?.Invoke(InstallPhase.Importing);
+					}
+
+					Debug.Log($"[PkgLnk] Package added: {request.Result.packageId} — awaiting import");
+
+					_waitingForImport = true;
+					_importWaitStart = EditorApplication.timeSinceStartup;
+					_sawCompiling = EditorApplication.isCompiling;
+					return;
+				}
+
+				// Failed
 				EditorApplication.update -= PollInstall;
+				var hadProg = _onProgress != null;
+				_onProgress = null;
+				if (hadProg) InstallProgressTracker.Stop();
+
+				var error = request.Error?.message ?? "Unknown error";
+				Debug.LogError($"[PkgLnk] Install failed: {error}");
+
+				var callback = _onComplete;
+				_onComplete = null;
+				callback?.Invoke(false, error);
 				return;
 			}
 
-			if (!_pendingRequest.IsCompleted) return;
+			// Phase 2: wait for import/compilation to finish
+			if (_waitingForImport)
+			{
+				if (EditorApplication.isCompiling)
+				{
+					_sawCompiling = true;
+					return;
+				}
 
+				// Compilation finished
+				if (_sawCompiling)
+				{
+					FinishSuccess();
+					return;
+				}
+
+				// Haven't seen compilation yet — wait warmup period
+				var elapsed = EditorApplication.timeSinceStartup - _importWaitStart;
+				if (elapsed < ImportWarmupDelay) return;
+
+				FinishSuccess();
+			}
+		}
+
+		private static void FinishSuccess()
+		{
+			_waitingForImport = false;
+			_sawCompiling = false;
 			EditorApplication.update -= PollInstall;
-			SessionState.EraseString(SessionKeySlug);
-
-			var request = _pendingRequest;
-			_pendingRequest = null;
 
 			var callback = _onComplete;
 			_onComplete = null;
+			_onProgress = null;
 
-			if (request.Status == StatusCode.Success)
-			{
-				Debug.Log($"[PkgLnk] Installed: {request.Result.packageId}");
-				callback?.Invoke(true, null);
-			}
-			else
-			{
-				var error = request.Error?.message ?? "Unknown error";
-				Debug.LogError($"[PkgLnk] Install failed: {error}");
-				callback?.Invoke(false, error);
-			}
+			callback?.Invoke(true, null);
 		}
 	}
 }

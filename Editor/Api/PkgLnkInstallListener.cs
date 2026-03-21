@@ -25,6 +25,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		static PkgLnkInstallListener()
 		{
+			Debug.Log("[PkgLnk] PkgLnkInstallListener static constructor called");
 			Start();
 			EditorApplication.quitting += Stop;
 		}
@@ -106,9 +107,11 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			try
 			{
 				var path = request.Url.AbsolutePath.TrimEnd('/');
+				Debug.Log($"[PkgLnk] HTTP {request.HttpMethod} {path} from {request.RemoteEndPoint}");
 
 				if (request.HttpMethod == "OPTIONS")
 				{
+					Debug.Log("[PkgLnk] Responding 204 to CORS preflight");
 					response.StatusCode = 204;
 					response.Close();
 					return;
@@ -117,6 +120,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				switch (path)
 				{
 					case "/ping":
+						Debug.Log("[PkgLnk] Ping received, responding OK");
 						SendJson(response, 200, "{\"status\":\"ok\"}");
 						break;
 
@@ -125,6 +129,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 						break;
 
 					default:
+						Debug.Log($"[PkgLnk] Unknown path: {path}, responding 404");
 						SendJson(response, 404, "{\"error\":\"not_found\"}");
 						break;
 				}
@@ -144,8 +149,11 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		private static void HandleInstall(HttpListenerRequest request, HttpListenerResponse response)
 		{
+			Debug.Log($"[PkgLnk] /install handler called, method={request.HttpMethod}");
+
 			if (request.HttpMethod != "POST")
 			{
+				Debug.Log($"[PkgLnk] Rejecting non-POST method: {request.HttpMethod}");
 				SendJson(response, 405, "{\"error\":\"method_not_allowed\"}");
 				return;
 			}
@@ -156,30 +164,38 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				body = reader.ReadToEnd();
 			}
 
+			Debug.Log($"[PkgLnk] Request body: {body}");
+
 			var url = ParseUrlFromJson(body);
 
 			if (string.IsNullOrEmpty(url))
 			{
+				Debug.LogWarning("[PkgLnk] Could not parse URL from request body");
 				SendJson(response, 400, "{\"error\":\"missing_url\"}");
 				return;
 			}
 
+			Debug.Log($"[PkgLnk] Parsed install URL: {url}");
+
 			if (!url.StartsWith(AllowedUrlPrefix, StringComparison.OrdinalIgnoreCase))
 			{
+				Debug.LogWarning($"[PkgLnk] URL rejected — does not start with {AllowedUrlPrefix}");
 				SendJson(response, 400, "{\"error\":\"invalid_url\"}");
 				return;
 			}
 
 			if (PackageInstaller.IsInstalling)
 			{
+				Debug.LogWarning("[PkgLnk] Rejecting — another install already in progress");
 				SendJson(response, 409, "{\"error\":\"install_in_progress\"}");
 				return;
 			}
 
 			// Dispatch install to the main thread
+			Debug.Log($"[PkgLnk] Dispatching Client.Add to main thread for: {url}");
 			EditorApplication.delayCall += () =>
 			{
-				Debug.Log($"[PkgLnk] Install request received from browser: {url}");
+				Debug.Log($"[PkgLnk] Main thread executing Client.Add({url})");
 				Client.Add(url);
 			};
 
