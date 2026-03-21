@@ -433,7 +433,8 @@
     color: #a7f3d0;
     margin-bottom: 6px;
     white-space: normal;
-    max-height: 48px;
+    min-height: 56px;
+    max-height: 56px;
     overflow: hidden;
 }
 
@@ -1264,6 +1265,20 @@
     align-items: center;
     justify-content: center;
     width: 100%;
+}
+
+.confirm-brand-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.confirm-logo {
+    width: 22px;
+    height: 22px;
+    margin-right: 8px;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: #10b981;
 }
 
 .confirm-slug {

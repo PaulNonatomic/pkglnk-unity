@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-03-21
+
+### Added
+- Collections tab with collection cards, detail view, and batch install with per-package progress
+- Install confirmation popup for browser-initiated installs with pkglnk branding and animated progress
+- Install progress tracking with phase callbacks (Resolving, Downloading, Importing, Complete)
+- Multi-strategy installed package detection (PackageInfo registry, manifest.json, and Packages lock file)
+- Tab icons for Directory, Collections, Bookmarks, and My Packages tabs
+- Unit tests for InstallProgressTracker
+
+### Changed
+- Package description area now reserves space for 4 lines for consistent card heights
+- Browser install listener uses confirmation popup instead of silent installation
+
+### Fixed
+- CORS origin matching for browser install requests (www.pkglnk.dev support)
+- Tracking URL validation now accepts both pkglnk.dev and www.pkglnk.dev prefixes
+- Background thread crash when checking install state from HTTP listener thread
+
 ## [0.5.0] - 2026-03-20
 
 ### Added

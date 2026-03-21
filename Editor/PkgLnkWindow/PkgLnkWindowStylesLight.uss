@@ -536,6 +536,10 @@
 
 /* ─── Install Confirm Window (Light) ────────────────────── */
 
+.confirm-logo {
+    -unity-background-image-tint-color: #059669;
+}
+
 .confirm-slug {
     color: #059669;
 }

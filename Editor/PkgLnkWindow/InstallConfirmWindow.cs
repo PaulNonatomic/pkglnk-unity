@@ -101,9 +101,23 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_confirmSection.AddToClassList("confirm-section");
 			root.Add(_confirmSection);
 
+			var brandRow = new VisualElement();
+			brandRow.AddToClassList("confirm-brand-row");
+			_confirmSection.Add(brandRow);
+
+			var logoIcon = new VisualElement();
+			logoIcon.AddToClassList("confirm-logo");
+			var iconTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(
+				"Packages/com.nonatomic.pkglnk/Editor/Icons/pkglnk-box-green.png");
+			if (iconTexture != null)
+			{
+				logoIcon.style.backgroundImage = new StyleBackground(iconTexture);
+			}
+			brandRow.Add(logoIcon);
+
 			var title = new Label("Install Package");
 			title.AddToClassList("login-card-title");
-			_confirmSection.Add(title);
+			brandRow.Add(title);
 
 			var message = new Label($"A website is requesting to install a package into your project:");
 			message.AddToClassList("login-card-message");
