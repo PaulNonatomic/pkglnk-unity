@@ -25,7 +25,11 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			"http://localhost:4173",
 			"http://localhost:3000"
 		};
-		private const string AllowedUrlPrefix = "https://pkglnk.dev/track/";
+		private static readonly string[] AllowedUrlPrefixes =
+		{
+			"https://pkglnk.dev/track/",
+			"https://www.pkglnk.dev/track/"
+		};
 
 		private static HttpListener _listener;
 		private static Thread _listenerThread;
@@ -201,9 +205,19 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 			Debug.Log($"[PkgLnk] Parsed install URL: {url}");
 
-			if (!url.StartsWith(AllowedUrlPrefix, StringComparison.OrdinalIgnoreCase))
+			var urlAllowed = false;
+			foreach (var prefix in AllowedUrlPrefixes)
 			{
-				Debug.LogWarning($"[PkgLnk] URL rejected — does not start with {AllowedUrlPrefix}");
+				if (url.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+				{
+					urlAllowed = true;
+					break;
+				}
+			}
+
+			if (!urlAllowed)
+			{
+				Debug.LogWarning($"[PkgLnk] URL rejected — does not match any allowed prefix: {url}");
 				SendJson(response, 400, "{\"error\":\"invalid_url\"}");
 				return;
 			}
