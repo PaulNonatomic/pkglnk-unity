@@ -2,9 +2,7 @@
 
 Browse, search, and install Unity packages from [pkglnk.dev](https://pkglnk.dev) — directly inside the Unity Editor.
 
-<!-- Screenshot: Full PkgLnk window showing the package grid with cards, search bar, and filter options -->
-<!-- Suggested size: 900×550, captured from Unity Editor with the PkgLnk window open -->
-![PkgLnk Window](Screenshots/pkglnk-window.png)
+<img width="696" height="810" alt="Unity_B8ndJpeVNi" src="https://github.com/user-attachments/assets/6cce9b15-b0e7-46e8-bac4-688f11cd03b4" />
 
 ## Features
 
@@ -12,17 +10,11 @@ Browse, search, and install Unity packages from [pkglnk.dev](https://pkglnk.dev)
 
 A responsive card grid with infinite scroll for browsing the full pkglnk.dev directory. Cards display the package image (or a placeholder icon), name, description, topic tags, star count, and install count. Installed packages are highlighted with a green border for quick identification.
 
-<!-- Screenshot: Close-up of the card grid showing a mix of installed (green border) and non-installed packages -->
-<!-- Suggested size: 700×450 -->
-![Package Grid](Screenshots/package-grid.png)
-
 ### Search
 
 Real-time debounced search filters packages as you type. Results update automatically with smooth skeleton loading states.
 
-<!-- Screenshot: The search bar with a query entered and filtered results below -->
-<!-- Suggested size: 700×350 -->
-![Search](Screenshots/search.png)
+<img width="691" height="460" alt="Unity_TJyStBB7bP" src="https://github.com/user-attachments/assets/0376cecb-1796-4ba8-aa55-ac1e76504681" />
 
 ### Filters
 
@@ -36,17 +28,13 @@ A multi-criteria filter system lets you narrow packages by:
 
 Active filter count is shown as a badge on the filter button. Filters compose with search for precise results.
 
-<!-- Screenshot: The filter dropdown open, showing the available filter categories and some active selections -->
-<!-- Suggested size: 400×500 -->
-![Filters](Screenshots/filters.png)
+<img width="691" height="240" alt="Unity_dDLHeVyz79" src="https://github.com/user-attachments/assets/785af6a0-b04d-4e73-9e58-cb1449fc8e73" />
 
 ### Package Details
 
 Click any card to view full package details including description, repository owner, platform, star count, install count, last updated date, package name, and topic tags. Clickable topic tags navigate back to the grid filtered by that topic.
 
-<!-- Screenshot: The package detail view for a specific package, showing all metadata and the install button -->
-<!-- Suggested size: 700×500 -->
-![Package Detail](Screenshots/package-detail.png)
+<img width="692" height="421" alt="Unity_NCU4cNPTmp" src="https://github.com/user-attachments/assets/f3bedb55-029a-4eec-ab52-04fdcb5215f4" />
 
 ### One-Click Install
 
@@ -56,25 +44,13 @@ Install any package directly into your project through the Unity Package Manager
 
 Sign in to bookmark packages for quick access. Toggle bookmarks directly from cards using the star icon. The Bookmarks tab shows all your bookmarked packages in one place.
 
-<!-- Screenshot: Cards showing the bookmark star icon, with one or two bookmarked (filled star) -->
-<!-- Suggested size: 500×300 -->
-![Bookmarks](Screenshots/bookmarks.png)
+<img width="696" height="810" alt="Unity_O9aygJ2DYH" src="https://github.com/user-attachments/assets/074b5d97-069e-4d94-b002-b9caf669b26c" />
 
 ### Sign In
 
 Browser-based OAuth authentication through pkglnk.dev. Sign in with GitHub, GitLab, or Bitbucket to access bookmarks and manage your packages. The sign-in flow opens your system browser and returns the session to Unity automatically.
 
-<!-- Screenshot: The login modal that appears when accessing Bookmarks or My Packages while signed out -->
-<!-- Suggested size: 400×300 -->
-![Sign In Modal](Screenshots/sign-in-modal.png)
-
-### Dark & Light Themes
-
-Fully themed for both Unity Pro (dark) and Unity Personal (light) editor skins using dedicated USS stylesheets.
-
-<!-- Screenshot: Side-by-side comparison of the PkgLnk window in dark and light themes -->
-<!-- Suggested size: 900×450 (two windows composited side by side) -->
-![Themes](Screenshots/themes.png)
+<img width="863" height="760" alt="chrome_r8jhTHjf4C" src="https://github.com/user-attachments/assets/d5c3275f-9f71-4171-a7af-8f221337fc93" />
 
 ## Installation
 
