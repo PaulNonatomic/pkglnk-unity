@@ -2,9 +2,22 @@
 
 Browse, search, and install Unity packages from [pkglnk.dev](https://pkglnk.dev) — directly inside the Unity Editor.
 
-<img width="696" height="810" alt="Unity_B8ndJpeVNi" src="https://github.com/user-attachments/assets/6cce9b15-b0e7-46e8-bac4-688f11cd03b4" />
+## Installation
+
+Add **PkgLnk** to your Unity project via Package Manager:
+
+1. Open **Window > Package Manager**
+2. Click **+** > **Add package from git URL**
+3. Enter:
+```
+https://www.pkglnk.dev/track/pkglnk-unity.git
+```
+
+[![pkglnk](https://www.pkglnk.dev/card/pkglnk-unity.svg?variant=install)](https://www.pkglnk.dev/pkg/pkglnk-unity)
 
 ## Features
+
+<img width="696" height="810" alt="Unity_B8ndJpeVNi" src="https://github.com/user-attachments/assets/6cce9b15-b0e7-46e8-bac4-688f11cd03b4" />
 
 ### Package Browser
 
