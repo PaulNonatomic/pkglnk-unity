@@ -1,6 +1,9 @@
 # PkgLnk for Unity
 
-Browse, search, and install Unity packages from [pkglnk.dev](https://pkglnk.dev) — directly inside the Unity Editor.
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Unity 2022.3+](https://img.shields.io/badge/Unity-2022.3%2B-blue.svg)](https://unity.com)
+
+**PkgLnk** is a free Unity Editor plugin that lets you browse, search, and install Unity packages from the [pkglnk.dev](https://pkglnk.dev) package directory — directly inside the Unity Editor via the Unity Package Manager (UPM). No more copy-pasting git URLs.
 
 ## Installation
 
@@ -17,7 +20,7 @@ https://www.pkglnk.dev/track/pkglnk-unity.git
 
 ## Features
 
-<img width="696" height="810" alt="Unity_B8ndJpeVNi" src="https://github.com/user-attachments/assets/6cce9b15-b0e7-46e8-bac4-688f11cd03b4" />
+<img width="696" height="810" alt="PkgLnk Unity Editor window showing package browser grid with search, filters, and one-click install" src="https://github.com/user-attachments/assets/6cce9b15-b0e7-46e8-bac4-688f11cd03b4" />
 
 ### Package Browser
 
@@ -27,7 +30,7 @@ A responsive card grid with infinite scroll for browsing the full pkglnk.dev dir
 
 Real-time debounced search filters packages as you type. Results update automatically with smooth skeleton loading states.
 
-<img width="691" height="460" alt="Unity_TJyStBB7bP" src="https://github.com/user-attachments/assets/0376cecb-1796-4ba8-aa55-ac1e76504681" />
+<img width="691" height="460" alt="Real-time search filtering Unity packages by name and description" src="https://github.com/user-attachments/assets/0376cecb-1796-4ba8-aa55-ac1e76504681" />
 
 ### Filters
 
@@ -41,15 +44,15 @@ A multi-criteria filter system lets you narrow packages by:
 
 Active filter count is shown as a badge on the filter button. Filters compose with search for precise results.
 
-<img width="691" height="240" alt="Unity_dDLHeVyz79" src="https://github.com/user-attachments/assets/785af6a0-b04d-4e73-9e58-cb1449fc8e73" />
+<img width="691" height="240" alt="Filter dropdown for narrowing Unity packages by install status, platform, and topic" src="https://github.com/user-attachments/assets/785af6a0-b04d-4e73-9e58-cb1449fc8e73" />
 
 ### Package Details
 
 Click any card to view full package details including description, repository owner, platform, star count, install count, last updated date, package name, and topic tags. Clickable topic tags navigate back to the grid filtered by that topic.
 
-<img width="692" height="421" alt="Unity_NCU4cNPTmp" src="https://github.com/user-attachments/assets/f3bedb55-029a-4eec-ab52-04fdcb5215f4" />
+<img width="692" height="421" alt="Package detail view showing description, repository info, install count, and install button" src="https://github.com/user-attachments/assets/f3bedb55-029a-4eec-ab52-04fdcb5215f4" />
 
-### One-Click Install
+### One-Click Install via Unity Package Manager
 
 Install any package directly into your project through the Unity Package Manager. The install button shows real-time status — whether a package is already installed, currently installing, or available to install.
 
@@ -57,45 +60,13 @@ Install any package directly into your project through the Unity Package Manager
 
 Sign in to bookmark packages for quick access. Toggle bookmarks directly from cards using the star icon. The Bookmarks tab shows all your bookmarked packages in one place.
 
-<img width="696" height="810" alt="Unity_O9aygJ2DYH" src="https://github.com/user-attachments/assets/074b5d97-069e-4d94-b002-b9caf669b26c" />
+<img width="696" height="810" alt="Bookmarked Unity packages with star icon for quick access" src="https://github.com/user-attachments/assets/074b5d97-069e-4d94-b002-b9caf669b26c" />
 
 ### Sign In
 
 Browser-based OAuth authentication through pkglnk.dev. Sign in with GitHub, GitLab, or Bitbucket to access bookmarks and manage your packages. The sign-in flow opens your system browser and returns the session to Unity automatically.
 
-<img width="863" height="760" alt="chrome_r8jhTHjf4C" src="https://github.com/user-attachments/assets/d5c3275f-9f71-4171-a7af-8f221337fc93" />
-
-## Installation
-
-### Via Unity Package Manager (recommended)
-
-1. Open **Window > Package Manager**
-2. Click **+** → **Add package from git URL...**
-3. Enter:
-
-```
-https://github.com/PaulNonatomic/pkglnk-unity.git
-```
-
-### Via manifest.json
-
-Add the following to your project's `Packages/manifest.json`:
-
-```json
-{
-  "dependencies": {
-    "com.nonatomic.pkglnk": "https://github.com/PaulNonatomic/pkglnk-unity.git"
-  }
-}
-```
-
-### Specific Version
-
-To pin a specific version, append the tag:
-
-```
-https://github.com/PaulNonatomic/pkglnk-unity.git#v0.2.0
-```
+<img width="863" height="760" alt="OAuth sign-in modal for GitHub, GitLab, and Bitbucket authentication" src="https://github.com/user-attachments/assets/d5c3275f-9f71-4171-a7af-8f221337fc93" />
 
 ## Usage
 
@@ -118,6 +89,7 @@ From there you can:
 
 - Unity **2022.3** or later
 - Internet connection for browsing and installing packages
+- No external dependencies — pure Unity UI Toolkit
 
 ## Architecture
 
@@ -145,6 +117,7 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 ## Links
 
-- [pkglnk.dev](https://pkglnk.dev) — Package directory website
+- [pkglnk.dev](https://pkglnk.dev) — The package directory website
+- [Changelog](CHANGELOG.md) — Version history
 - [Issues](https://github.com/PaulNonatomic/pkglnk-unity/issues) — Bug reports and feature requests
 - [Nonatomic](https://nonatomic.co.uk/) — Author
