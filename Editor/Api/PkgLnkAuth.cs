@@ -15,6 +15,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		private const string EditorPrefsTokenKey = "PkgLnk_ApiToken";
 		private const string EditorPrefsUsernameKey = "PkgLnk_Username";
 		private const string EditorPrefsAvatarUrlKey = "PkgLnk_AvatarUrl";
+		private const string EditorPrefsUserIdKey = "PkgLnk_UserId";
 		private const string AuthStartUrl = "https://pkglnk.dev/auth/unity-start";
 		private const float TimeoutSeconds = 120f;
 
@@ -42,6 +43,13 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		{
 			get => EditorPrefs.GetString(EditorPrefsAvatarUrlKey, string.Empty);
 			private set => EditorPrefs.SetString(EditorPrefsAvatarUrlKey, value);
+		}
+
+		/// <summary>The logged-in user's server-side ID (UUID).</summary>
+		public static string UserId
+		{
+			get => EditorPrefs.GetString(EditorPrefsUserIdKey, string.Empty);
+			private set => EditorPrefs.SetString(EditorPrefsUserIdKey, value);
 		}
 
 		/// <summary>True if a valid token is stored.</summary>
@@ -94,12 +102,23 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			EditorApplication.delayCall += () => ScheduleTimeout(port);
 		}
 
-		/// <summary>Clears the stored token, username, and avatar URL.</summary>
+		/// <summary>Clears the stored token, username, avatar URL, and user ID.</summary>
 		public static void Logout()
 		{
 			EditorPrefs.DeleteKey(EditorPrefsTokenKey);
 			EditorPrefs.DeleteKey(EditorPrefsUsernameKey);
 			EditorPrefs.DeleteKey(EditorPrefsAvatarUrlKey);
+			EditorPrefs.DeleteKey(EditorPrefsUserIdKey);
+		}
+
+		/// <summary>
+		/// Signs out and immediately starts a new login flow.
+		/// Use when the token needs refreshed scopes.
+		/// </summary>
+		public static void ReAuth(Action<bool, string> onComplete)
+		{
+			Logout();
+			Login(onComplete);
 		}
 
 		private static void ListenForCallback(int port)
@@ -113,6 +132,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				var token = request.QueryString["token"];
 				var username = request.QueryString["username"];
 				var avatarUrl = request.QueryString["avatar_url"];
+				var userId = request.QueryString["user_id"];
 				var error = request.QueryString["error"];
 
 				string responseHtml;
@@ -127,7 +147,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				{
 					responseHtml = BuildResponseHtml(true, $"Signed in as {username ?? "user"}");
 					SendResponse(response, responseHtml);
-					CompleteLogin(true, null, token, username ?? string.Empty, avatarUrl ?? string.Empty);
+					CompleteLogin(true, null, token, username ?? string.Empty, avatarUrl ?? string.Empty, userId ?? string.Empty);
 				}
 				else
 				{
@@ -154,7 +174,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			}
 		}
 
-		private static void CompleteLogin(bool success, string error, string token = null, string username = null, string avatarUrl = null)
+		private static void CompleteLogin(bool success, string error, string token = null, string username = null, string avatarUrl = null, string userId = null)
 		{
 			EditorApplication.delayCall += () =>
 			{
@@ -165,6 +185,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 					Token = token;
 					Username = username ?? string.Empty;
 					AvatarUrl = avatarUrl ?? string.Empty;
+					UserId = userId ?? string.Empty;
 #if PKGLNK_DEBUG
 					Debug.Log($"[PkgLnk] Logged in as {username}");
 #endif

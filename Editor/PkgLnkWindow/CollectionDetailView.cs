@@ -15,6 +15,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 	public class CollectionDetailView : VisualElement
 	{
 		private readonly Action _onBack;
+		private readonly Action<CollectionData> _onEdit;
+		private readonly Action<CollectionData> _onDelete;
+		private readonly Action<CollectionData, PackageData> _onRemovePackage;
 
 		// Header
 		private readonly VisualElement _ownerAvatar;
@@ -23,6 +26,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly Label _descLabel;
 		private readonly Label _packageCountLabel;
 		private readonly VisualElement _tagsRow;
+
+		// Owner actions
+		private readonly VisualElement _ownerActionsRow;
+		private readonly Button _editButton;
+		private readonly Button _deleteButton;
 
 		// Install all
 		private readonly Button _installAllButton;
@@ -40,10 +48,18 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private PackageData[] _packages;
 		private readonly List<PackageRow> _packageRows = new List<PackageRow>();
 		private string _boundAvatarUrl;
+		private bool _isOwner;
 
-		public CollectionDetailView(Action onBack)
+		public CollectionDetailView(
+			Action onBack,
+			Action<CollectionData> onEdit = null,
+			Action<CollectionData> onDelete = null,
+			Action<CollectionData, PackageData> onRemovePackage = null)
 		{
 			_onBack = onBack;
+			_onEdit = onEdit;
+			_onDelete = onDelete;
+			_onRemovePackage = onRemovePackage;
 
 			AddToClassList("collection-detail");
 			style.display = DisplayStyle.None;
@@ -86,6 +102,22 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_tagsRow.AddToClassList("topic-tags-row");
 			_tagsRow.style.display = DisplayStyle.None;
 			Add(_tagsRow);
+
+			// Owner actions (Edit / Delete)
+			_ownerActionsRow = new VisualElement();
+			_ownerActionsRow.AddToClassList("collection-owner-actions");
+			_ownerActionsRow.style.display = DisplayStyle.None;
+			Add(_ownerActionsRow);
+
+			_editButton = new Button(() => _onEdit?.Invoke(_collection));
+			_editButton.text = "Edit";
+			_editButton.AddToClassList("collection-edit-button");
+			_ownerActionsRow.Add(_editButton);
+
+			_deleteButton = new Button(OnDeleteClicked);
+			_deleteButton.text = "Delete";
+			_deleteButton.AddToClassList("collection-delete-button");
+			_ownerActionsRow.Add(_deleteButton);
 
 			// Install All / Cancel row
 			var actionRow = new VisualElement();
@@ -159,17 +191,18 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		/// <summary>
 		/// Populates the detail view and immediately starts installing all packages.
 		/// </summary>
-		public void ShowAndInstallAll(CollectionData collection, PackageData[] packages)
+		public void ShowAndInstallAll(CollectionData collection, PackageData[] packages, bool isOwner = false)
 		{
-			Show(collection, packages);
+			Show(collection, packages, isOwner);
 			OnInstallAllClicked();
 		}
 
 		/// <summary>
 		/// Populates the detail view with collection data and its packages.
 		/// </summary>
-		public void Show(CollectionData collection, PackageData[] packages)
+		public void Show(CollectionData collection, PackageData[] packages, bool isOwner = false)
 		{
+			_isOwner = isOwner;
 			style.display = DisplayStyle.Flex;
 			_statusLabel.style.display = DisplayStyle.None;
 			_errorLabel.style.display = DisplayStyle.None;
@@ -232,6 +265,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			{
 				_tagsRow.style.display = DisplayStyle.None;
 			}
+
+			// Owner actions visibility
+			_ownerActionsRow.style.display = _isOwner ? DisplayStyle.Flex : DisplayStyle.None;
 
 			// Ensure installed cache is fresh
 			PackageInstaller.InvalidateInstalledCache();
@@ -308,7 +344,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			foreach (var pkg in _packages)
 			{
-				var row = new PackageRow(pkg, OnRowInstallClicked);
+				Action<PackageRow> removeAction = _isOwner ? OnRowRemoveClicked : null;
+				var row = new PackageRow(pkg, OnRowInstallClicked, removeAction);
 				_packageRows.Add(row);
 				_packageListContainer.Add(row);
 			}
@@ -335,6 +372,28 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					_errorLabel.style.display = DisplayStyle.Flex;
 				}
 			}, phase => row.SetInstallPhase(phase));
+		}
+
+		private void OnDeleteClicked()
+		{
+			if (_collection == null) return;
+
+			var confirmed = EditorUtility.DisplayDialog(
+				"Delete Collection",
+				$"Are you sure you want to delete \"{_collection.name}\"? This cannot be undone.",
+				"Delete",
+				"Cancel");
+
+			if (confirmed)
+			{
+				_onDelete?.Invoke(_collection);
+			}
+		}
+
+		private void OnRowRemoveClicked(PackageRow row)
+		{
+			if (_collection == null || row.Package == null) return;
+			_onRemovePackage?.Invoke(_collection, row.Package);
 		}
 
 		private void OnInstallAllClicked()
@@ -455,6 +514,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			private readonly VisualElement _progressTrack;
 			private readonly VisualElement _progressFill;
 			private readonly Action<PackageRow> _onInstallClicked;
+			private readonly Action<PackageRow> _onRemoveClicked;
 
 			private bool _isInstalled;
 			private bool _isAnimating;
@@ -465,10 +525,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			private double _lastSpinnerTime;
 			private int _spinnerFrame;
 
-			public PackageRow(PackageData pkg, Action<PackageRow> onInstallClicked)
+			public PackageRow(PackageData pkg, Action<PackageRow> onInstallClicked, Action<PackageRow> onRemoveClicked = null)
 			{
 				Package = pkg;
 				_onInstallClicked = onInstallClicked;
+				_onRemoveClicked = onRemoveClicked;
 
 				AddToClassList("collection-package-row");
 
@@ -505,6 +566,14 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_installButton = new Button(() => _onInstallClicked?.Invoke(this));
 				_installButton.AddToClassList("install-button");
 				topRow.Add(_installButton);
+
+				if (_onRemoveClicked != null)
+				{
+					var removeButton = new Button(() => _onRemoveClicked.Invoke(this));
+					removeButton.text = "\u2715";
+					removeButton.AddToClassList("package-remove-button");
+					topRow.Add(removeButton);
+				}
 
 				// Progress bar — track with fill child
 				_progressTrack = new VisualElement();

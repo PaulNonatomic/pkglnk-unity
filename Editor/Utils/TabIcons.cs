@@ -11,10 +11,14 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 		private static Texture2D _compass;
 		private static Texture2D _folder;
 		private static Texture2D _grid;
+		private static Texture2D _sun;
+		private static Texture2D _moon;
 
 		public static Texture2D Compass => _compass ??= Generate(CompassBitmap);
 		public static Texture2D Folder => _folder ??= Generate(FolderBitmap);
 		public static Texture2D Grid => _grid ??= Generate(GridBitmap);
+		public static Texture2D Sun => _sun ??= Generate(SunBitmap);
+		public static Texture2D Moon => _moon ??= Generate(MoonBitmap);
 
 		// Compass icon (Directory) — circle with diamond, matches pkglnk.dev desktop nav
 		private static readonly string[] CompassBitmap =
@@ -70,6 +74,44 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			".#...#.#...#..",
 			".#####.#####..",
 			"..............",
+			"..............",
+		};
+
+		// Sun icon (light mode indicator) — circle with rays
+		private static readonly string[] SunBitmap =
+		{
+			"......#.......",
+			"..#...#...#...",
+			"...#..#..#....",
+			"......#.......",
+			"...#######....",
+			"..##.....##...",
+			".##.......##..",
+			"###.......###.",
+			".##.......##..",
+			"..##.....##...",
+			"...#######....",
+			"......#.......",
+			"...#..#..#....",
+			"..#...#...#...",
+		};
+
+		// Moon icon (dark mode indicator) — crescent
+		private static readonly string[] MoonBitmap =
+		{
+			"..............",
+			"....######....",
+			"...##....##...",
+			"..##......#...",
+			".##.......#...",
+			".#........#...",
+			"##.......##...",
+			"##.......##...",
+			".#........#...",
+			".##.......#...",
+			"..##......#...",
+			"...##....##...",
+			"....######....",
 			"..............",
 		};
 

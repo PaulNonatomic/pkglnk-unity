@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Nonatomic.PkgLnk.Editor.Api;
 using Nonatomic.PkgLnk.Editor.Utils;
 using UnityEditor;
@@ -15,6 +16,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 	{
 		private readonly Action _onBack;
 		private readonly Action<string> _onTopicClicked;
+		private readonly Action<PackageData> _onAddToCollection;
 
 		private readonly Label _titleLabel;
 		private readonly Label _platformLabel;
@@ -28,14 +30,25 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly VisualElement _topicsRow;
 		private readonly Button _installButton;
 		private readonly Label _errorLabel;
+		private readonly Button _addToCollectionButton;
+		private readonly VisualElement _imageArea;
+		private readonly VisualElement _imageElement;
+		private readonly VisualElement _placeholderIcon;
+		private readonly ScrollView _readmeScroll;
+		private readonly VisualElement _readmeContainer;
+		private readonly Label _readmeLoading;
+
+		private static readonly Dictionary<string, string> ReadmeCache = new Dictionary<string, string>();
 
 		private PackageData _currentPackage;
 		private bool _isInstalled;
+		private string _boundImageUrl = string.Empty;
 
-		public PackageDetailView(Action onBack, Action<string> onTopicClicked)
+		public PackageDetailView(Action onBack, Action<string> onTopicClicked, Action<PackageData> onAddToCollection = null)
 		{
 			_onBack = onBack;
 			_onTopicClicked = onTopicClicked;
+			_onAddToCollection = onAddToCollection;
 
 			AddToClassList("package-detail");
 
@@ -62,6 +75,26 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_ownerLabel = new Label();
 			_ownerLabel.AddToClassList("detail-owner");
 			Add(_ownerLabel);
+
+			// Image
+			_imageArea = new VisualElement();
+			_imageArea.AddToClassList("detail-image-area");
+			Add(_imageArea);
+
+			_imageElement = new VisualElement();
+			_imageElement.AddToClassList("card-image");
+			_imageElement.style.display = DisplayStyle.None;
+			_imageArea.Add(_imageElement);
+
+			_placeholderIcon = new VisualElement();
+			_placeholderIcon.AddToClassList("card-image-placeholder");
+			var placeholderTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(
+				"Packages/com.nonatomic.pkglnk/Editor/Icons/pkglnk-box-green.png");
+			if (placeholderTexture != null)
+			{
+				_placeholderIcon.style.backgroundImage = new StyleBackground(placeholderTexture);
+			}
+			_imageArea.Add(_placeholderIcon);
 
 			// Stats row
 			var statsRow = new VisualElement();
@@ -115,11 +148,32 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_installButton.AddToClassList("detail-install-button");
 			Add(_installButton);
 
+			// Add to Collection button
+			_addToCollectionButton = new Button(() => _onAddToCollection?.Invoke(_currentPackage));
+			_addToCollectionButton.text = "Add to Collection";
+			_addToCollectionButton.AddToClassList("add-to-collection-button");
+			_addToCollectionButton.style.display = DisplayStyle.None;
+			Add(_addToCollectionButton);
+
 			// Error label
 			_errorLabel = new Label();
 			_errorLabel.AddToClassList("error-label");
 			_errorLabel.style.display = DisplayStyle.None;
 			Add(_errorLabel);
+
+			// README section
+			_readmeScroll = new ScrollView(ScrollViewMode.Vertical);
+			_readmeScroll.AddToClassList("detail-readme-scroll");
+			Add(_readmeScroll);
+
+			_readmeLoading = new Label("Loading README...");
+			_readmeLoading.AddToClassList("detail-readme-loading");
+			_readmeLoading.style.display = DisplayStyle.None;
+			_readmeScroll.Add(_readmeLoading);
+
+			_readmeContainer = new VisualElement();
+			_readmeContainer.AddToClassList("detail-readme");
+			_readmeScroll.Add(_readmeContainer);
 		}
 
 		/// <summary>
@@ -129,6 +183,29 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			_currentPackage = pkg;
 			_errorLabel.style.display = DisplayStyle.None;
+
+			// Image
+			var imageUrl = pkg.card_image_url ?? string.Empty;
+			if (imageUrl != _boundImageUrl)
+			{
+				_boundImageUrl = imageUrl;
+				_imageElement.style.backgroundImage = StyleKeyword.None;
+				_imageElement.style.display = DisplayStyle.None;
+				_placeholderIcon.style.display = DisplayStyle.Flex;
+
+				if (!string.IsNullOrEmpty(imageUrl))
+				{
+					ImageLoader.Load(imageUrl, texture =>
+					{
+						if (texture == null || panel == null) return;
+						if (_currentPackage != pkg) return;
+
+						_imageElement.style.backgroundImage = new StyleBackground(texture);
+						_imageElement.style.display = DisplayStyle.Flex;
+						_placeholderIcon.style.display = DisplayStyle.None;
+					});
+				}
+			}
 
 			_titleLabel.text = pkg.display_name;
 			_platformLabel.text = pkg.git_platform;
@@ -178,6 +255,15 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			// Install state
 			_isInstalled = PackageInstaller.IsInstalled(pkg);
 			UpdateInstallButton();
+
+			// Add to Collection — visible only when logged in
+			_addToCollectionButton.style.display =
+				PkgLnkAuth.IsLoggedIn && _onAddToCollection != null
+					? DisplayStyle.Flex
+					: DisplayStyle.None;
+
+			// README
+			FetchAndRenderReadme(pkg);
 		}
 
 		/// <summary>
@@ -236,6 +322,51 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_installButton.SetEnabled(true);
 				_installButton.RemoveFromClassList("installed-button");
 			}
+		}
+
+		private void FetchAndRenderReadme(PackageData pkg)
+		{
+			_readmeContainer.Clear();
+			_readmeLoading.style.display = DisplayStyle.None;
+
+			if (pkg.git_platform != "github" ||
+				string.IsNullOrEmpty(pkg.git_owner) ||
+				string.IsNullOrEmpty(pkg.git_repo))
+			{
+				return;
+			}
+
+			var cacheKey = $"{pkg.git_owner}/{pkg.git_repo}";
+
+			if (ReadmeCache.TryGetValue(cacheKey, out var cached))
+			{
+				RenderReadme(cached, pkg);
+				return;
+			}
+
+			_readmeLoading.style.display = DisplayStyle.Flex;
+
+			PkgLnkApiClient.FetchReadme(pkg.git_owner, pkg.git_repo, (markdown, error) =>
+			{
+				if (_currentPackage != pkg) return;
+
+				_readmeLoading.style.display = DisplayStyle.None;
+
+				if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(markdown))
+				{
+					return;
+				}
+
+				ReadmeCache[cacheKey] = markdown;
+				RenderReadme(markdown, pkg);
+			});
+		}
+
+		private void RenderReadme(string markdown, PackageData pkg)
+		{
+			_readmeContainer.Clear();
+			var rendered = MarkdownRenderer.Render(markdown, pkg.git_owner, pkg.git_repo, pkg.git_ref);
+			_readmeContainer.Add(rendered);
 		}
 	}
 }

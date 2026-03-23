@@ -9,6 +9,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 	public class CollectionData
 	{
 		public string id = string.Empty;
+		public string user_id = string.Empty;
 		public string slug = string.Empty;
 		public string name = string.Empty;
 		public string description = string.Empty;
@@ -38,5 +39,23 @@ namespace Nonatomic.PkgLnk.Editor.Api
 	{
 		public CollectionData collection;
 		public PackageData[] packages = Array.Empty<PackageData>();
+	}
+
+	/// <summary>
+	/// Response from POST/PUT /api/v1/collections on pkglnk.dev.
+	/// </summary>
+	[Serializable]
+	public class CollectionMutationResponse
+	{
+		public CollectionData collection;
+	}
+
+	/// <summary>
+	/// Response from DELETE or package add/remove operations.
+	/// </summary>
+	[Serializable]
+	public class CollectionSuccessResponse
+	{
+		public bool success;
 	}
 }

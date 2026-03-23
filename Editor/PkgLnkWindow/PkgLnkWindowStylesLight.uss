@@ -277,6 +277,11 @@
     color: #022c22;
 }
 
+.detail-image-area {
+    background-color: #f7fdf9;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
 .detail-platform-badge {
     background-color: rgba(0, 0, 0, 0.04);
     border-color: rgba(0, 0, 0, 0.12);
@@ -546,4 +551,267 @@
 
 .confirm-url {
     color: rgba(30, 64, 55, 0.6);
+}
+
+/* ─── Collection Toggle Row (Light) ──────────────────────── */
+
+.collection-toggle-row {
+    background-color: #f7fdf9;
+    border-bottom-color: rgba(0, 0, 0, 0.12);
+}
+
+.toggle-button {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #6b9080;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.toggle-button:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.toggle-button-active {
+    background-color: rgba(5, 150, 105, 0.1);
+    border-color: rgba(5, 150, 105, 0.3);
+    color: #059669;
+}
+
+.toggle-button-active:hover {
+    background-color: rgba(5, 150, 105, 0.15);
+}
+
+.create-collection-button {
+    background-color: #059669;
+}
+
+.create-collection-button:hover {
+    background-color: #047857;
+}
+
+/* ─── Collection Owner Actions (Light) ───────────────────── */
+
+.collection-edit-button {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #1e4037;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.collection-edit-button:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.collection-delete-button {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #dc2626;
+    border-color: rgba(220, 38, 38, 0.2);
+}
+
+.collection-delete-button:hover {
+    background-color: rgba(220, 38, 38, 0.06);
+    border-color: rgba(220, 38, 38, 0.4);
+}
+
+.package-remove-button {
+    color: rgba(220, 38, 38, 0.4);
+}
+
+.package-remove-button:hover {
+    background-color: rgba(220, 38, 38, 0.06);
+    color: #dc2626;
+}
+
+/* ─── Add to Collection (Light) ──────────────────────────── */
+
+.add-to-collection-button {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #1e4037;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.add-to-collection-button:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.add-to-collection-dropdown {
+    background-color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.add-to-collection-title {
+    color: #022c22;
+}
+
+.add-to-collection-close {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #6b9080;
+}
+
+.add-to-collection-close:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    color: #022c22;
+}
+
+.add-to-collection-loading {
+    color: #6b9080;
+}
+
+.add-to-collection-empty {
+    color: #6b9080;
+}
+
+.add-to-collection-row {
+    border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.add-to-collection-name {
+    color: #022c22;
+}
+
+.add-to-collection-count {
+    color: #6b9080;
+}
+
+.add-to-collection-add-btn {
+    background-color: #059669;
+}
+
+.add-to-collection-add-btn:hover {
+    background-color: #047857;
+}
+
+.add-to-collection-create {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #1e4037;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.add-to-collection-create:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* ─── Collection Form Window (Light) ─────────────────────── */
+
+.collection-form-title {
+    color: #022c22;
+}
+
+.collection-form-label {
+    color: #1e4037;
+}
+
+.collection-form-input > .unity-text-field__input {
+    background-color: #ffffff;
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #022c22;
+}
+
+.collection-form-input > .unity-text-field__input:focus {
+    border-color: #059669;
+}
+
+.slug-availability-label {
+    color: #6b9080;
+}
+
+.slug-available {
+    color: #059669;
+}
+
+.slug-taken {
+    color: #dc2626;
+}
+
+.collection-form-error {
+    color: #dc2626;
+}
+
+.collection-form-cancel {
+    background-color: rgba(0, 0, 0, 0.04);
+    color: #1e4037;
+    border-color: rgba(0, 0, 0, 0.12);
+}
+
+.collection-form-cancel:hover {
+    background-color: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+.collection-form-submit {
+    background-color: #059669;
+}
+
+.collection-form-submit:hover {
+    background-color: #047857;
+}
+
+.collection-form-saving-label {
+    color: #6b9080;
+}
+
+/* Theme toggle — light overrides */
+.theme-toggle {
+    background-color: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.15);
+}
+
+.theme-toggle:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.25);
+}
+
+.theme-toggle-icon {
+    -unity-background-image-tint-color: #ffffff;
+}
+
+/* ─── README (Light) ────────────────────────────────────────── */
+
+.detail-readme-scroll {
+    border-top-color: rgba(0, 0, 0, 0.08);
+}
+
+.detail-readme-loading {
+    color: #6b9080;
+}
+
+.readme-heading {
+    color: #022c22;
+}
+
+.readme-h1 {
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.readme-h2 {
+    border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.readme-h6 {
+    color: #6b9080;
+}
+
+.readme-paragraph {
+    color: #1e4037;
+}
+
+.readme-code-block {
+    color: #1e4037;
+    background-color: #f7fdf9;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.readme-list-item {
+    color: #1e4037;
+}
+
+.readme-blockquote {
+    color: #6b9080;
+    border-left-color: rgba(0, 0, 0, 0.15);
+}
+
+.readme-hr {
+    background-color: rgba(0, 0, 0, 0.08);
 }

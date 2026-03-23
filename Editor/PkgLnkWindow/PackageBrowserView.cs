@@ -23,6 +23,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			MyPackages
 		}
 
+		private enum CollectionViewMode
+		{
+			All,
+			Mine
+		}
+
 		private const string SessionKeyActiveTab = "PkgLnk_ActiveTab";
 		private const string SessionKeyDetailSlug = "PkgLnk_CollectionDetailSlug";
 
@@ -39,6 +45,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private const float PrefetchViewportMultiplier = 3f;
 
 		// Header
+		private readonly VisualElement _authRow;
 		private readonly Button _profileButton;
 		private readonly VisualElement _avatarImage;
 		private readonly Label _usernameLabel;
@@ -62,6 +69,17 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly Label _filterBadge;
 		private readonly PackageFilterDropdown _filterDropdown;
 		private readonly PackageFilterState _filterState = new PackageFilterState();
+
+		// Collection toggle
+		private readonly VisualElement _collectionToggleRow;
+		private readonly Button _allCollectionsButton;
+		private readonly Button _myCollectionsButton;
+		private readonly Button _createCollectionButton;
+		private CollectionViewMode _collectionViewMode = CollectionViewMode.All;
+		private bool _myCollectionsFetched;
+
+		// Add to Collection dropdown
+		private readonly AddToCollectionDropdown _addToCollectionDropdown;
 
 		// Content
 		private readonly Label _statusLabel;
@@ -150,7 +168,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var logoIcon = new VisualElement();
 			logoIcon.AddToClassList("header-logo");
 			var iconTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(
-				"Packages/com.nonatomic.pkglnk/Editor/Icons/pkglnk-box-green.png");
+				"Packages/com.nonatomic.pkglnk/Editor/Icons/pkglnk-box-white.png");
 			if (iconTexture != null)
 			{
 				logoIcon.style.backgroundImage = new StyleBackground(iconTexture);
@@ -161,20 +179,20 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			brandLabel.AddToClassList("header-brand");
 			brandRow.Add(brandLabel);
 
-			var authRow = new VisualElement();
-			authRow.AddToClassList("header-auth-row");
-			headerBar.Add(authRow);
+			_authRow = new VisualElement();
+			_authRow.AddToClassList("header-auth-row");
+			headerBar.Add(_authRow);
 
 			_signInButton = new Button(OnSignInClicked);
 			_signInButton.text = "Sign In";
 			_signInButton.AddToClassList("sign-in-button");
-			authRow.Add(_signInButton);
+			_authRow.Add(_signInButton);
 
 			// Profile button (avatar + username, toggles dropdown)
 			_profileButton = new Button(ToggleProfileDropdown);
 			_profileButton.AddToClassList("profile-button");
 			_profileButton.style.display = DisplayStyle.None;
-			authRow.Add(_profileButton);
+			_authRow.Add(_profileButton);
 
 			_avatarImage = new VisualElement();
 			_avatarImage.AddToClassList("header-avatar");
@@ -254,6 +272,28 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_filterBadge.style.display = DisplayStyle.None;
 			_filterButton.Add(_filterBadge);
 
+			// Collection toggle row (All / Mine / + Create)
+			_collectionToggleRow = new VisualElement();
+			_collectionToggleRow.AddToClassList("collection-toggle-row");
+			_collectionToggleRow.style.display = DisplayStyle.None;
+			_listView.Add(_collectionToggleRow);
+
+			_allCollectionsButton = new Button(() => SwitchCollectionMode(CollectionViewMode.All));
+			_allCollectionsButton.text = "All";
+			_allCollectionsButton.AddToClassList("toggle-button");
+			_collectionToggleRow.Add(_allCollectionsButton);
+
+			_myCollectionsButton = new Button(() => SwitchCollectionMode(CollectionViewMode.Mine));
+			_myCollectionsButton.text = "Mine";
+			_myCollectionsButton.AddToClassList("toggle-button");
+			_collectionToggleRow.Add(_myCollectionsButton);
+
+			_createCollectionButton = new Button(OnCreateCollectionClicked);
+			_createCollectionButton.text = "+ Create";
+			_createCollectionButton.AddToClassList("create-collection-button");
+			_createCollectionButton.style.display = DisplayStyle.None;
+			_collectionToggleRow.Add(_createCollectionButton);
+
 			// Status label
 			_statusLabel = new Label();
 			_statusLabel.AddToClassList("status-label");
@@ -289,13 +329,23 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			});
 
 			// Detail view (hidden initially)
-			_detailView = new PackageDetailView(OnBackToList, OnTopicClicked);
+			_detailView = new PackageDetailView(OnBackToList, OnTopicClicked, OnAddToCollectionClicked);
 			_detailView.style.display = DisplayStyle.None;
 			Add(_detailView);
 
 			// Collection detail view (hidden initially)
-			_collectionDetailView = new CollectionDetailView(OnBackToList);
+			_collectionDetailView = new CollectionDetailView(
+				OnBackToList,
+				OnEditCollection,
+				OnDeleteCollection,
+				OnRemovePackageFromCollection);
 			Add(_collectionDetailView);
+
+			// Add to Collection dropdown (hidden initially)
+			_addToCollectionDropdown = new AddToCollectionDropdown(
+				() => _addToCollectionDropdown.Hide(),
+				OnCollectionCreatedFromDropdown);
+			Add(_addToCollectionDropdown);
 
 			// Login modal (hidden initially)
 			_loginOverlay = new VisualElement();
@@ -376,6 +426,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			FetchBookmarkIds();
 		}
 
+		public void AddToHeader(VisualElement element)
+		{
+			_authRow.Add(element);
+		}
+
 		public void RefreshInstalledState()
 		{
 			foreach (var card in _cardPool)
@@ -429,7 +484,14 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			{
 				if (_isFetching) return;
 				_debounceActive = false;
-				FetchCollections(true);
+				if (_collectionViewMode == CollectionViewMode.Mine)
+				{
+					ApplyCollectionFilters();
+				}
+				else
+				{
+					FetchCollections(true);
+				}
 			}
 			else
 			{
@@ -475,6 +537,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			PkgLnkAuth.Logout();
 			_bookmarkedIds.Clear();
 			_bookmarksFetched = false;
+			_myCollectionsFetched = false;
+			_allCollections.Clear();
+			_filteredCollections.Clear();
+			_collectionDetailView.Hide();
+			_collectionViewMode = CollectionViewMode.All;
 			_filterState.Bookmark = BookmarkFilter.All;
 			_filterDropdown.Refresh();
 			UpdateFilterBadge();
@@ -555,9 +622,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private void ShowLoginModal(BrowseTab tab)
 		{
 			_pendingTab = tab;
-			_loginMessage.text = tab == BrowseTab.Bookmarks
-				? "Sign in to access your bookmarks."
-				: "Sign in to access your packages.";
+			_loginMessage.text = tab switch
+			{
+				BrowseTab.Bookmarks => "Sign in to access your bookmarks.",
+				BrowseTab.Collections => "Sign in to manage your collections.",
+				_ => "Sign in to access your packages."
+			};
 			_loginButton.text = "Sign In";
 			_loginButton.SetEnabled(true);
 			_loginOverlay.style.display = DisplayStyle.Flex;
@@ -583,7 +653,18 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					DismissLoginModal();
 					UpdateAuthUI();
 					FetchBookmarkIds();
-					SwitchTab(_pendingTab);
+
+					if (_pendingTab == BrowseTab.Collections && _activeTab == BrowseTab.Collections)
+					{
+						// Already on Collections tab, just switch to Mine mode
+						_collectionViewMode = CollectionViewMode.Mine;
+						UpdateCollectionToggleButtons();
+						FetchMyCollections();
+					}
+					else
+					{
+						SwitchTab(_pendingTab);
+					}
 				}
 				else
 				{
@@ -627,7 +708,14 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			if (tab == BrowseTab.Collections)
 			{
-				FetchCollections(true);
+				if (_collectionViewMode == CollectionViewMode.Mine)
+				{
+					FetchMyCollections();
+				}
+				else
+				{
+					FetchCollections(true);
+				}
 			}
 			else
 			{
@@ -648,6 +736,13 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_filterButton.style.display = _activeTab == BrowseTab.Collections
 				? DisplayStyle.None
 				: DisplayStyle.Flex;
+
+			// Collection toggle row
+			_collectionToggleRow.style.display = _activeTab == BrowseTab.Collections
+				? DisplayStyle.Flex
+				: DisplayStyle.None;
+
+			UpdateCollectionToggleButtons();
 		}
 
 		private static Button CreateTabButton(string label, Texture2D icon, Action onClick)
@@ -685,6 +780,54 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			}
 		}
 
+		private void UpdateCollectionToggleButtons()
+		{
+			var isAll = _collectionViewMode == CollectionViewMode.All;
+
+			if (isAll)
+			{
+				_allCollectionsButton.AddToClassList("toggle-button-active");
+				_myCollectionsButton.RemoveFromClassList("toggle-button-active");
+			}
+			else
+			{
+				_allCollectionsButton.RemoveFromClassList("toggle-button-active");
+				_myCollectionsButton.AddToClassList("toggle-button-active");
+			}
+
+			_createCollectionButton.style.display =
+				!isAll && PkgLnkAuth.IsLoggedIn ? DisplayStyle.Flex : DisplayStyle.None;
+		}
+
+		private void SwitchCollectionMode(CollectionViewMode mode)
+		{
+			if (_collectionViewMode == mode) return;
+
+			if (mode == CollectionViewMode.Mine && !PkgLnkAuth.IsLoggedIn)
+			{
+				ShowLoginModal(BrowseTab.Collections);
+				return;
+			}
+
+			_collectionViewMode = mode;
+			HideAllCollectionPoolCards();
+			_scrollView.scrollOffset = Vector2.zero;
+			_searchField.SetValueWithoutNotify(string.Empty);
+			_currentQuery = string.Empty;
+			_clearSearchButton.style.display = DisplayStyle.None;
+			_debounceActive = false;
+			UpdateCollectionToggleButtons();
+
+			if (mode == CollectionViewMode.Mine)
+			{
+				FetchMyCollections();
+			}
+			else
+			{
+				FetchCollections(true);
+			}
+		}
+
 		// ─── Search ─────────────────────────────────────────────────────
 
 		private void OnSearchChanged(ChangeEvent<string> evt)
@@ -711,7 +854,14 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			}
 			else if (_activeTab == BrowseTab.Collections)
 			{
-				FetchCollections(true);
+				if (_collectionViewMode == CollectionViewMode.Mine)
+				{
+					ApplyCollectionFilters();
+				}
+				else
+				{
+					FetchCollections(true);
+				}
 			}
 			else
 			{
@@ -1190,6 +1340,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var query = _currentQuery ?? string.Empty;
 			var hasQuery = query.Length > 0;
 
+			// Browse tab: server already filters by query, skip client-side query filter
+			var applyClientQuery = hasQuery && _activeTab != BrowseTab.Browse;
+
 			_isBookmarkedDelegate ??= id => _bookmarkedIds.Contains(id);
 			var isBookmarked = _bookmarksFetched ? _isBookmarkedDelegate : null;
 
@@ -1198,7 +1351,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				if (!PackageFilterState.Matches(pkg, _filterState, _isInstalledDelegate, isBookmarked))
 					continue;
 
-				if (hasQuery && !MatchesQuery(pkg, query))
+				if (applyClientQuery && !MatchesQuery(pkg, query))
 					continue;
 
 				_filteredPackages.Add(pkg);
@@ -1228,21 +1381,39 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private static bool MatchesQuery(PackageData pkg, string query)
 		{
-			if (!string.IsNullOrEmpty(pkg.display_name) &&
-			    pkg.display_name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
+			if (FieldMatchesQuery(pkg.display_name, query)) return true;
+			if (FieldMatchesQuery(pkg.description, query)) return true;
+			if (FieldMatchesQuery(pkg.git_owner, query)) return true;
+			if (FieldMatchesQuery(pkg.slug, query)) return true;
+			if (FieldMatchesQuery(pkg.package_json_name, query)) return true;
+			return false;
+		}
+
+		private static bool FieldMatchesQuery(string field, string query)
+		{
+			if (string.IsNullOrEmpty(field)) return false;
+
+			// Substring match
+			if (field.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
 				return true;
-			if (!string.IsNullOrEmpty(pkg.description) &&
-			    pkg.description.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
-				return true;
-			if (!string.IsNullOrEmpty(pkg.git_owner) &&
-			    pkg.git_owner.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
-				return true;
-			if (!string.IsNullOrEmpty(pkg.slug) &&
-			    pkg.slug.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
-				return true;
-			if (!string.IsNullOrEmpty(pkg.package_json_name) &&
-			    pkg.package_json_name.IndexOf(query, StringComparison.OrdinalIgnoreCase) >= 0)
-				return true;
+
+			// Acronym match — query letters match first letter of consecutive words
+			// e.g. "VSM" matches "Visual State Machine"
+			var words = field.Split(new[] { ' ', '-', '_', '.' }, StringSplitOptions.RemoveEmptyEntries);
+			if (query.Length <= words.Length)
+			{
+				var acronymMatch = true;
+				for (var i = 0; i < query.Length; i++)
+				{
+					if (!char.ToUpperInvariant(words[i][0]).Equals(char.ToUpperInvariant(query[i])))
+					{
+						acronymMatch = false;
+						break;
+					}
+				}
+				if (acronymMatch) return true;
+			}
+
 			return false;
 		}
 
@@ -1637,15 +1808,174 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 				_collectionPackagesCache[slug] = response.packages;
 
+				var isOwner = PkgLnkAuth.IsLoggedIn &&
+				              !string.IsNullOrEmpty(response.collection.user_id) &&
+				              response.collection.user_id == PkgLnkAuth.UserId;
+
 				if (autoInstall)
 				{
-					_collectionDetailView.ShowAndInstallAll(response.collection, response.packages);
+					_collectionDetailView.ShowAndInstallAll(response.collection, response.packages, isOwner);
 				}
 				else
 				{
-					_collectionDetailView.Show(response.collection, response.packages);
+					_collectionDetailView.Show(response.collection, response.packages, isOwner);
 				}
 			});
+		}
+
+		// ─── My Collections ─────────────────────────────────────────────
+
+		private void FetchMyCollections()
+		{
+			if (!PkgLnkAuth.IsLoggedIn) return;
+
+			_isFetching = true;
+			_allCollections.Clear();
+			_filteredCollections.Clear();
+			_scrollView.scrollOffset = Vector2.zero;
+			HideStatus();
+			HideAllCollectionPoolCards();
+			UpdateCollectionLayout();
+
+			PkgLnkApiClient.FetchMyCollections(PkgLnkAuth.Token, (response, error) =>
+			{
+				_isFetching = false;
+
+				if (error != null)
+				{
+					HideAllCollectionPoolCards();
+
+					if (error.StartsWith("403"))
+					{
+						ShowStatus("Token needs refreshed permissions. Please sign out and sign in again.");
+					}
+					else
+					{
+						ShowStatus($"Error: {error}");
+					}
+					return;
+				}
+
+				if (response == null || response.collections == null)
+				{
+					HideAllCollectionPoolCards();
+					ShowStatus("No response received.");
+					return;
+				}
+
+				_myCollectionsFetched = true;
+				_collectionsHasMore = false;
+
+				foreach (var col in response.collections)
+				{
+					_allCollections.Add(col);
+				}
+
+				_collectionsTotalCount = _allCollections.Count;
+
+				if (_allCollections.Count == 0)
+				{
+					HideAllCollectionPoolCards();
+					ShowStatus("No collections yet. Create one to get started!");
+					_cardContainer.style.height = 0;
+					return;
+				}
+
+				ApplyCollectionFilters();
+			});
+		}
+
+		// ─── Collection CRUD Handlers ───────────────────────────────────
+
+		private void OnCreateCollectionClicked()
+		{
+			CollectionFormWindow.ShowCreate(newCollection =>
+			{
+				if (_collectionViewMode == CollectionViewMode.Mine)
+				{
+					FetchMyCollections();
+				}
+			});
+		}
+
+		private void OnEditCollection(CollectionData collection)
+		{
+			CollectionFormWindow.ShowEdit(collection, updatedCollection =>
+			{
+				// Refresh the detail view
+				ShowCollectionDetail(updatedCollection.slug, false);
+
+				// Refresh list if in Mine mode
+				if (_collectionViewMode == CollectionViewMode.Mine)
+				{
+					_myCollectionsFetched = false;
+				}
+			});
+		}
+
+		private void OnDeleteCollection(CollectionData collection)
+		{
+			PkgLnkApiClient.DeleteCollection(PkgLnkAuth.Token, collection.slug, (response, error) =>
+			{
+				if (error != null)
+				{
+					if (error.StartsWith("403"))
+					{
+						_collectionDetailView.ShowError("Token needs refreshed permissions. Please sign out and sign in again.");
+					}
+					else
+					{
+						_collectionDetailView.ShowError($"Failed to delete: {error}");
+					}
+					return;
+				}
+
+				// Back to list and refresh
+				OnBackToList();
+				if (_collectionViewMode == CollectionViewMode.Mine)
+				{
+					FetchMyCollections();
+				}
+				else
+				{
+					FetchCollections(true);
+				}
+			});
+		}
+
+		private void OnRemovePackageFromCollection(CollectionData collection, PackageData package)
+		{
+			PkgLnkApiClient.RemovePackageFromCollection(
+				PkgLnkAuth.Token,
+				collection.slug,
+				package.id,
+				(response, error) =>
+				{
+					if (error != null)
+					{
+						_collectionDetailView.ShowError($"Failed to remove package: {error}");
+						return;
+					}
+
+					// Refresh the detail view
+					ShowCollectionDetail(collection.slug, false);
+				});
+		}
+
+		private void OnAddToCollectionClicked(PackageData package)
+		{
+			if (!PkgLnkAuth.IsLoggedIn)
+			{
+				ShowLoginModal(BrowseTab.Collections);
+				return;
+			}
+
+			_addToCollectionDropdown.Show(package);
+		}
+
+		private void OnCollectionCreatedFromDropdown(CollectionData newCollection)
+		{
+			_myCollectionsFetched = false;
 		}
 
 		// ─── Bookmark State ─────────────────────────────────────────────

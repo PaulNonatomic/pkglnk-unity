@@ -659,6 +659,19 @@
     margin-bottom: 8px;
 }
 
+.detail-image-area {
+    width: 100%;
+    height: 140px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background-color: #04352a;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    align-items: center;
+    justify-content: center;
+}
+
 .detail-stats-row {
     flex-direction: row;
     margin-bottom: 10px;
@@ -1277,6 +1290,7 @@
     width: 22px;
     height: 22px;
     margin-right: 8px;
+    margin-bottom: 3px;
     -unity-background-scale-mode: scale-to-fit;
     -unity-background-image-tint-color: #10b981;
 }
@@ -1333,4 +1347,560 @@
 .confirm-close-button {
     width: 50%;
     margin-top: 16px;
+}
+
+/* ─── Collection Toggle Row ──────────────────────────────── */
+
+.collection-toggle-row {
+    flex-direction: row;
+    padding: 6px 12px;
+    align-items: center;
+    background-color: #04352a;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.toggle-button {
+    height: 24px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-size: 11px;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #6ee7b7;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    margin-right: 4px;
+    -unity-text-align: middle-center;
+}
+
+.toggle-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.toggle-button-active {
+    background-color: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #10b981;
+}
+
+.toggle-button-active:hover {
+    background-color: rgba(16, 185, 129, 0.25);
+}
+
+.create-collection-button {
+    height: 24px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    background-color: #10b981;
+    color: #ffffff;
+    border-width: 0;
+    margin-left: auto;
+    -unity-text-align: middle-center;
+}
+
+.create-collection-button:hover {
+    background-color: #059669;
+}
+
+/* ─── Collection Owner Actions ───────────────────────────── */
+
+.collection-owner-actions {
+    flex-direction: row;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.collection-edit-button {
+    height: 24px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #a7f3d0;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    margin-right: 6px;
+    -unity-text-align: middle-center;
+}
+
+.collection-edit-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.collection-delete-button {
+    height: 24px;
+    padding: 0 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #f87171;
+    border-width: 1px;
+    border-color: rgba(248, 113, 113, 0.2);
+    -unity-text-align: middle-center;
+}
+
+.collection-delete-button:hover {
+    background-color: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.4);
+}
+
+/* ─── Package Remove Button ──────────────────────────────── */
+
+.package-remove-button {
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 4px;
+    font-size: 12px;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgba(248, 113, 113, 0.5);
+    border-width: 0;
+    margin-left: 4px;
+    flex-shrink: 0;
+    -unity-text-align: middle-center;
+}
+
+.package-remove-button:hover {
+    background-color: rgba(248, 113, 113, 0.1);
+    color: #f87171;
+}
+
+/* ─── Add to Collection Button ───────────────────────────── */
+
+.add-to-collection-button {
+    height: 28px;
+    border-radius: 8px;
+    font-size: 11px;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #a7f3d0;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    margin-top: 6px;
+    -unity-text-align: middle-center;
+}
+
+.add-to-collection-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ─── Add to Collection Dropdown ─────────────────────────── */
+
+.add-to-collection-dropdown {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    width: 320px;
+    max-height: 400px;
+    background-color: #064e3b;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 12px;
+    overflow: hidden;
+}
+
+.add-to-collection-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.add-to-collection-title {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: #ecfdf5;
+}
+
+.add-to-collection-close {
+    width: 22px;
+    height: 22px;
+    font-size: 14px;
+    -unity-font-style: bold;
+    padding: 0;
+    border-radius: 6px;
+    border-width: 0;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #6ee7b7;
+    -unity-text-align: middle-center;
+}
+
+.add-to-collection-close:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ecfdf5;
+}
+
+.add-to-collection-list {
+    max-height: 260px;
+    overflow: hidden;
+}
+
+.add-to-collection-loading {
+    font-size: 11px;
+    color: #6ee7b7;
+    -unity-font-style: italic;
+    padding: 8px 0;
+    -unity-text-align: middle-center;
+}
+
+.add-to-collection-empty {
+    font-size: 11px;
+    color: #6ee7b7;
+    -unity-font-style: italic;
+    padding: 8px 0;
+    -unity-text-align: middle-center;
+}
+
+.add-to-collection-row {
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.04);
+}
+
+.add-to-collection-info {
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+    margin-right: 8px;
+}
+
+.add-to-collection-name {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: #ecfdf5;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.add-to-collection-count {
+    font-size: 10px;
+    color: #6ee7b7;
+}
+
+.add-to-collection-add-btn {
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 6px;
+    font-size: 10px;
+    background-color: #10b981;
+    color: #ffffff;
+    border-width: 0;
+    flex-shrink: 0;
+    -unity-text-align: middle-center;
+}
+
+.add-to-collection-add-btn:hover {
+    background-color: #059669;
+}
+
+.add-to-collection-add-btn:disabled {
+    background-color: rgba(255, 255, 255, 0.03);
+    color: rgba(110, 231, 183, 0.4);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+.add-to-collection-create {
+    height: 28px;
+    border-radius: 8px;
+    font-size: 11px;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #a7f3d0;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    margin-top: 8px;
+    -unity-text-align: middle-center;
+}
+
+.add-to-collection-create:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ─── Collection Form Window ─────────────────────────────── */
+
+.collection-form-root {
+    padding: 16px;
+}
+
+.collection-form-section {
+    flex-grow: 1;
+}
+
+.collection-form-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #ecfdf5;
+    margin-bottom: 16px;
+}
+
+.collection-form-field {
+    margin-bottom: 12px;
+}
+
+.collection-form-label {
+    font-size: 11px;
+    color: #a7f3d0;
+    margin-bottom: 4px;
+    -unity-font-style: bold;
+}
+
+.collection-form-input {
+    flex-grow: 1;
+}
+
+.collection-form-input > .unity-text-field__input {
+    background-color: #022c22;
+    border-color: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #ecfdf5;
+    padding: 4px 8px;
+}
+
+.collection-form-input > .unity-text-field__input:focus {
+    border-color: #10b981;
+}
+
+.collection-form-textarea > .unity-text-field__input {
+    min-height: 60px;
+    white-space: normal;
+}
+
+.collection-form-slug-row {
+    flex-direction: row;
+    align-items: center;
+}
+
+.slug-availability-label {
+    font-size: 10px;
+    margin-left: auto;
+    color: #6ee7b7;
+}
+
+.slug-available {
+    color: #22c55e;
+}
+
+.slug-taken {
+    color: #f87171;
+}
+
+.collection-form-error {
+    font-size: 11px;
+    color: #f87171;
+    margin-bottom: 8px;
+    white-space: normal;
+}
+
+.collection-form-buttons {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.collection-form-cancel {
+    height: 28px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 11px;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: #a7f3d0;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    margin-right: 6px;
+    -unity-text-align: middle-center;
+}
+
+.collection-form-cancel:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+
+.collection-form-submit {
+    height: 28px;
+    padding: 0 16px;
+    border-radius: 8px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    background-color: #10b981;
+    color: #ffffff;
+    border-width: 0;
+    -unity-text-align: middle-center;
+}
+
+.collection-form-submit:hover {
+    background-color: #059669;
+}
+
+.collection-form-saving {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.collection-form-saving-label {
+    font-size: 13px;
+    color: #6ee7b7;
+    -unity-font-style: italic;
+}
+
+/* Theme toggle — inline in header auth row */
+.theme-toggle {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    margin-left: 6px;
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.12);
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.theme-toggle-icon {
+    width: 20px;
+    height: 20px;
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* ─── README ────────────────────────────────────────────────── */
+
+.detail-readme-scroll {
+    flex-grow: 1;
+    margin-top: 12px;
+    border-top-width: 1px;
+    border-top-color: rgba(255, 255, 255, 0.08);
+}
+
+.detail-readme-loading {
+    font-size: 11px;
+    color: #6ee7b7;
+    -unity-font-style: italic;
+    padding: 12px 0;
+    -unity-text-align: middle-center;
+}
+
+.detail-readme {
+    padding-top: 8px;
+}
+
+.readme-content {
+    flex-direction: column;
+}
+
+.readme-heading {
+    -unity-font-style: bold;
+    color: #ecfdf5;
+    margin-top: 16px;
+    margin-bottom: 8px;
+    white-space: normal;
+}
+
+.readme-h1 {
+    font-size: 20px;
+    margin-top: 20px;
+    padding-bottom: 6px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.readme-h2 {
+    font-size: 17px;
+    margin-top: 18px;
+    padding-bottom: 4px;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.readme-h3 {
+    font-size: 15px;
+}
+
+.readme-h4 {
+    font-size: 13px;
+}
+
+.readme-h5 {
+    font-size: 12px;
+}
+
+.readme-h6 {
+    font-size: 11px;
+    color: #6ee7b7;
+}
+
+.readme-paragraph {
+    font-size: 12px;
+    color: #a7f3d0;
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.readme-code-block {
+    font-size: 11px;
+    color: #a7f3d0;
+    background-color: #04352a;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    white-space: normal;
+    overflow: hidden;
+}
+
+.readme-list {
+    margin-bottom: 8px;
+    padding-left: 8px;
+}
+
+.readme-list-item {
+    font-size: 12px;
+    color: #a7f3d0;
+    white-space: normal;
+    margin-bottom: 2px;
+    padding-left: 4px;
+}
+
+.readme-blockquote {
+    font-size: 12px;
+    color: #6ee7b7;
+    border-left-width: 3px;
+    border-left-color: rgba(255, 255, 255, 0.15);
+    padding-left: 12px;
+    margin-top: 4px;
+    margin-bottom: 8px;
+    white-space: normal;
+}
+
+.readme-hr {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.08);
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+.readme-image-container {
+    margin-top: 4px;
+    margin-bottom: 8px;
+}
+
+.readme-image {
+    -unity-background-scale-mode: scale-to-fit;
+    max-width: 600px;
 }

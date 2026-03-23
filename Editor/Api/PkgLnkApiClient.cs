@@ -214,6 +214,225 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			operation.completed += _ => HandleJsonResponse(request, onComplete);
 		}
 
+		// ─── Authenticated Collection CRUD ─────────────────────────────
+
+		/// <summary>
+		/// Fetches the authenticated user's own collections.
+		/// </summary>
+		public static void FetchMyCollections(string token, Action<CollectionsResponse, string> onComplete)
+		{
+			var request = UnityWebRequest.Get($"{ApiV1Url}/collections");
+			request.SetRequestHeader("User-Agent", UserAgent);
+			request.SetRequestHeader("Authorization", $"Bearer {token}");
+
+			var operation = request.SendWebRequest();
+			operation.completed += _ => HandleJsonResponse(request, onComplete);
+		}
+
+		/// <summary>
+		/// Creates a new collection.
+		/// </summary>
+		public static void CreateCollection(
+			string token,
+			string slug,
+			string name,
+			string description,
+			Action<CollectionMutationResponse, string> onComplete)
+		{
+			var body = $"{{\"slug\":\"{EscapeJson(slug)}\",\"name\":\"{EscapeJson(name)}\",\"description\":\"{EscapeJson(description)}\"}}";
+			SendAuthenticatedRequest("POST", $"{ApiV1Url}/collections", token, body, onComplete);
+		}
+
+		/// <summary>
+		/// Updates an existing collection.
+		/// </summary>
+		public static void UpdateCollection(
+			string token,
+			string slug,
+			string name,
+			string description,
+			Action<CollectionMutationResponse, string> onComplete)
+		{
+			var body = $"{{\"name\":\"{EscapeJson(name)}\",\"description\":\"{EscapeJson(description)}\"}}";
+			SendAuthenticatedRequest("PUT", $"{ApiV1Url}/collections/{Uri.EscapeDataString(slug)}", token, body, onComplete);
+		}
+
+		/// <summary>
+		/// Deletes a collection by slug.
+		/// </summary>
+		public static void DeleteCollection(
+			string token,
+			string slug,
+			Action<CollectionSuccessResponse, string> onComplete)
+		{
+			var url = $"{ApiV1Url}/collections/{Uri.EscapeDataString(slug)}";
+			var request = new UnityWebRequest(url, "DELETE");
+			request.downloadHandler = new DownloadHandlerBuffer();
+			request.SetRequestHeader("User-Agent", UserAgent);
+			request.SetRequestHeader("Authorization", $"Bearer {token}");
+
+			var operation = request.SendWebRequest();
+			operation.completed += _ => HandleAuthenticatedResponse(request, onComplete);
+		}
+
+		/// <summary>
+		/// Adds a package to a collection.
+		/// </summary>
+		public static void AddPackageToCollection(
+			string token,
+			string collectionSlug,
+			string packageId,
+			Action<CollectionSuccessResponse, string> onComplete)
+		{
+			var body = $"{{\"packageId\":\"{EscapeJson(packageId)}\"}}";
+			SendAuthenticatedRequest("POST", $"{ApiV1Url}/collections/{Uri.EscapeDataString(collectionSlug)}/packages", token, body, onComplete);
+		}
+
+		/// <summary>
+		/// Removes a package from a collection.
+		/// </summary>
+		public static void RemovePackageFromCollection(
+			string token,
+			string collectionSlug,
+			string packageId,
+			Action<CollectionSuccessResponse, string> onComplete)
+		{
+			var body = $"{{\"packageId\":\"{EscapeJson(packageId)}\"}}";
+			var url = $"{ApiV1Url}/collections/{Uri.EscapeDataString(collectionSlug)}/packages";
+			var request = new UnityWebRequest(url, "DELETE");
+			request.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(body));
+			request.downloadHandler = new DownloadHandlerBuffer();
+			request.SetRequestHeader("Content-Type", "application/json");
+			request.SetRequestHeader("User-Agent", UserAgent);
+			request.SetRequestHeader("Authorization", $"Bearer {token}");
+
+			var operation = request.SendWebRequest();
+			operation.completed += _ => HandleAuthenticatedResponse(request, onComplete);
+		}
+
+		/// <summary>
+		/// Checks if a slug is available for a collection.
+		/// </summary>
+		public static void CheckSlugAvailability(
+			string slug,
+			Action<bool, string> onComplete)
+		{
+			var url = $"https://pkglnk.dev/api/check-availability?slug={Uri.EscapeDataString(slug)}&type=collection";
+			var request = UnityWebRequest.Get(url);
+			request.SetRequestHeader("User-Agent", UserAgent);
+
+			var operation = request.SendWebRequest();
+			operation.completed += _ =>
+			{
+				if (request.result != UnityWebRequest.Result.Success)
+				{
+					var error = request.error;
+					request.Dispose();
+					onComplete?.Invoke(false, error);
+					return;
+				}
+
+				try
+				{
+					var json = request.downloadHandler.text;
+					// Simple parse: look for "available":true or "available":false
+					var available = json.Contains("\"available\":true");
+					request.Dispose();
+					onComplete?.Invoke(available, null);
+				}
+				catch (Exception ex)
+				{
+					request.Dispose();
+					onComplete?.Invoke(false, ex.Message);
+				}
+			};
+		}
+
+		private static void SendAuthenticatedRequest<T>(
+			string method,
+			string url,
+			string token,
+			string jsonBody,
+			Action<T, string> onComplete)
+		{
+			var request = new UnityWebRequest(url, method);
+			request.uploadHandler = new UploadHandlerRaw(System.Text.Encoding.UTF8.GetBytes(jsonBody));
+			request.downloadHandler = new DownloadHandlerBuffer();
+			request.SetRequestHeader("Content-Type", "application/json");
+			request.SetRequestHeader("User-Agent", UserAgent);
+			request.SetRequestHeader("Authorization", $"Bearer {token}");
+
+			var operation = request.SendWebRequest();
+			operation.completed += _ => HandleAuthenticatedResponse(request, onComplete);
+		}
+
+		private static void HandleAuthenticatedResponse<T>(
+			UnityWebRequest request,
+			Action<T, string> onComplete)
+		{
+			if (request.result != UnityWebRequest.Result.Success)
+			{
+				// Include response code for scope/permission detection
+				var error = $"{request.responseCode}: {request.error}";
+
+				// Try to extract server error message
+				try
+				{
+					var body = request.downloadHandler?.text;
+					if (!string.IsNullOrEmpty(body) && body.Contains("\"message\""))
+					{
+						var msgStart = body.IndexOf("\"message\":\"", StringComparison.Ordinal);
+						if (msgStart >= 0)
+						{
+							msgStart += 11;
+							var msgEnd = body.IndexOf("\"", msgStart, StringComparison.Ordinal);
+							if (msgEnd > msgStart)
+							{
+								error = $"{request.responseCode}: {body.Substring(msgStart, msgEnd - msgStart)}";
+							}
+						}
+					}
+				}
+				catch
+				{
+					// Use the default error
+				}
+
+				request.Dispose();
+				onComplete?.Invoke(default, error);
+				return;
+			}
+
+			T response;
+
+			try
+			{
+				var json = request.downloadHandler.text;
+				response = JsonUtility.FromJson<T>(json);
+			}
+			catch (Exception ex)
+			{
+				onComplete?.Invoke(default, $"Parse error: {ex.Message}");
+				return;
+			}
+			finally
+			{
+				request.Dispose();
+			}
+
+			onComplete?.Invoke(response, null);
+		}
+
+		private static string EscapeJson(string s)
+		{
+			if (string.IsNullOrEmpty(s)) return string.Empty;
+			return s.Replace("\\", "\\\\")
+				.Replace("\"", "\\\"")
+				.Replace("\n", "\\n")
+				.Replace("\r", "\\r")
+				.Replace("\t", "\\t");
+		}
+
 		private static void HandleJsonResponse<T>(
 			UnityWebRequest request,
 			Action<T, string> onComplete)
@@ -244,6 +463,39 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			}
 
 			onComplete?.Invoke(response, null);
+		}
+
+		// ─── README ─────────────────────────────────────────────────────
+
+		/// <summary>
+		/// Fetches the raw README markdown from GitHub for a package.
+		/// Only works for GitHub-hosted packages.
+		/// </summary>
+		public static void FetchReadme(
+			string gitOwner,
+			string gitRepo,
+			Action<string, string> onComplete)
+		{
+			var url = $"https://api.github.com/repos/{Uri.EscapeDataString(gitOwner)}/{Uri.EscapeDataString(gitRepo)}/readme";
+			var request = UnityWebRequest.Get(url);
+			request.SetRequestHeader("User-Agent", UserAgent);
+			request.SetRequestHeader("Accept", "application/vnd.github.v3.raw");
+
+			var operation = request.SendWebRequest();
+			operation.completed += _ =>
+			{
+				if (request.result != UnityWebRequest.Result.Success)
+				{
+					var error = $"Error: {request.error}";
+					request.Dispose();
+					onComplete?.Invoke(null, error);
+					return;
+				}
+
+				var text = request.downloadHandler.text;
+				request.Dispose();
+				onComplete?.Invoke(text, null);
+			};
 		}
 
 		private static string BuildUrl(string query, string topic, int page, int limit)
