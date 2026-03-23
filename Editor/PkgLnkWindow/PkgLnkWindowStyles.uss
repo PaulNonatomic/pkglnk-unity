@@ -1786,6 +1786,13 @@
     border-top-color: rgba(255, 255, 255, 0.08);
 }
 
+.detail-readme-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #ecfdf5;
+    padding: 12px 0 8px 0;
+}
+
 .detail-readme-loading {
     font-size: 11px;
     color: #6ee7b7;
@@ -1795,7 +1802,7 @@
 }
 
 .detail-readme {
-    padding-top: 8px;
+    padding-top: 0;
 }
 
 .readme-content {
@@ -1893,6 +1900,44 @@
     background-color: rgba(255, 255, 255, 0.08);
     margin-top: 12px;
     margin-bottom: 12px;
+}
+
+.readme-table {
+    margin-top: 4px;
+    margin-bottom: 8px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.readme-table-row {
+    flex-direction: row;
+    border-bottom-width: 1px;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.readme-table-header-row {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+.readme-table-header-cell {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: #ecfdf5;
+    padding: 6px 10px;
+    flex-grow: 1;
+    flex-basis: 0;
+    white-space: normal;
+}
+
+.readme-table-cell {
+    font-size: 11px;
+    color: #a7f3d0;
+    padding: 6px 10px;
+    flex-grow: 1;
+    flex-basis: 0;
+    white-space: normal;
 }
 
 .readme-image-container {

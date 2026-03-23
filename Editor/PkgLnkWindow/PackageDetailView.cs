@@ -35,6 +35,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly VisualElement _imageElement;
 		private readonly VisualElement _placeholderIcon;
 		private readonly ScrollView _readmeScroll;
+		private readonly Label _readmeTitle;
 		private readonly VisualElement _readmeContainer;
 		private readonly Label _readmeLoading;
 
@@ -165,6 +166,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_readmeScroll = new ScrollView(ScrollViewMode.Vertical);
 			_readmeScroll.AddToClassList("detail-readme-scroll");
 			Add(_readmeScroll);
+
+			_readmeTitle = new Label("Readme");
+			_readmeTitle.AddToClassList("detail-readme-title");
+			_readmeTitle.style.display = DisplayStyle.None;
+			_readmeScroll.Add(_readmeTitle);
 
 			_readmeLoading = new Label("Loading README...");
 			_readmeLoading.AddToClassList("detail-readme-loading");
@@ -328,6 +334,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			_readmeContainer.Clear();
 			_readmeLoading.style.display = DisplayStyle.None;
+			_readmeTitle.style.display = DisplayStyle.None;
 
 			if (pkg.git_platform != "github" ||
 				string.IsNullOrEmpty(pkg.git_owner) ||
@@ -365,6 +372,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private void RenderReadme(string markdown, PackageData pkg)
 		{
 			_readmeContainer.Clear();
+			_readmeTitle.style.display = DisplayStyle.Flex;
 			var rendered = MarkdownRenderer.Render(markdown, pkg.git_owner, pkg.git_repo, pkg.git_ref);
 			_readmeContainer.Add(rendered);
 		}

@@ -773,6 +773,10 @@
     border-top-color: rgba(0, 0, 0, 0.08);
 }
 
+.detail-readme-title {
+    color: #022c22;
+}
+
 .detail-readme-loading {
     color: #6b9080;
 }
@@ -814,4 +818,24 @@
 
 .readme-hr {
     background-color: rgba(0, 0, 0, 0.08);
+}
+
+.readme-table {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.readme-table-row {
+    border-bottom-color: rgba(0, 0, 0, 0.06);
+}
+
+.readme-table-header-row {
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+.readme-table-header-cell {
+    color: #022c22;
+}
+
+.readme-table-cell {
+    color: #1e4037;
 }

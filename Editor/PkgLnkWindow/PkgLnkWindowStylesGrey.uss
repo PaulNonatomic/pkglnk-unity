@@ -769,6 +769,10 @@
     border-top-color: rgba(255, 255, 255, 0.06);
 }
 
+.detail-readme-title {
+    color: #e0e0e0;
+}
+
 .detail-readme-loading {
     color: #808080;
 }
@@ -810,4 +814,24 @@
 
 .readme-hr {
     background-color: rgba(255, 255, 255, 0.06);
+}
+
+.readme-table {
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+.readme-table-row {
+    border-bottom-color: rgba(255, 255, 255, 0.04);
+}
+
+.readme-table-header-row {
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.readme-table-header-cell {
+    color: #e0e0e0;
+}
+
+.readme-table-cell {
+    color: #b0b0b0;
 }

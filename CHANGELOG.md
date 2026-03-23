@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2026-03-23
+
+### Added
+- README rendering in package detail view with markdown-to-VisualElement converter
+- HTML block element support: headings, tables, pre/code, details/summary, lists, blockquotes, hr
+- HTML inline element support: strong, em, code, kbd, a, br, del, sup, sub
+- HTML entity decoding (amp, lt, gt, quot, nbsp)
+- Readme title heading above rendered content
+- Table rendering with header row styling and equal-width columns
+- README cache to avoid refetching on back/forward navigation
+- Grey theme with greyscale colour palette and orange logo variant
+- Three-state theme toggle cycle: dark, light, grey
+- Collection CRUD: create, edit, delete collections from Unity
+- Add-to-collection dropdown on package detail view
+- Collection form window with slug availability checking
+
+### Changed
+- Theme toggle moved into header bar alongside auth controls
+- MarkdownRenderer converts HTML inline tags to markdown before processing
+
 ## [0.6.0] - 2026-03-21
 
 ### Added
