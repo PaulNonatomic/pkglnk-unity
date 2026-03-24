@@ -17,6 +17,14 @@
     color: #022c22;
 }
 
+.header-version {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+.header-version-update {
+    color: #059669;
+}
+
 .sign-in-button {
     background-color: #059669;
 }

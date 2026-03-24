@@ -468,6 +468,45 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		// ─── README ─────────────────────────────────────────────────────
 
 		/// <summary>
+		/// Fetches the latest release version tag from GitHub.
+		/// <paramref name="onComplete"/> receives (versionString, errorMessage).
+		/// </summary>
+		public static void FetchLatestVersion(
+			string gitOwner,
+			string gitRepo,
+			Action<string, string> onComplete)
+		{
+			var url = $"https://api.github.com/repos/{Uri.EscapeDataString(gitOwner)}/{Uri.EscapeDataString(gitRepo)}/releases/latest";
+			var request = UnityWebRequest.Get(url);
+			request.SetRequestHeader("User-Agent", UserAgent);
+			request.SetRequestHeader("Accept", "application/vnd.github.v3+json");
+
+			var operation = request.SendWebRequest();
+			operation.completed += _ =>
+			{
+				if (request.result != UnityWebRequest.Result.Success)
+				{
+					var error = $"Error: {request.error}";
+					request.Dispose();
+					onComplete?.Invoke(null, error);
+					return;
+				}
+
+				var json = request.downloadHandler.text;
+				request.Dispose();
+
+				var tagName = ParseJsonField(json, "tag_name");
+				if (string.IsNullOrEmpty(tagName))
+				{
+					onComplete?.Invoke(null, "Could not parse tag_name from response");
+					return;
+				}
+
+				onComplete?.Invoke(tagName, null);
+			};
+		}
+
+		/// <summary>
 		/// Fetches the raw README markdown from GitHub for a package.
 		/// Only works for GitHub-hosted packages.
 		/// </summary>
@@ -513,6 +552,27 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			}
 
 			return url;
+		}
+
+		/// <summary>
+		/// Extracts a simple string field value from a JSON object.
+		/// </summary>
+		private static string ParseJsonField(string json, string field)
+		{
+			var key = $"\"{field}\"";
+			var index = json.IndexOf(key, StringComparison.Ordinal);
+			if (index < 0) return null;
+
+			var colonIndex = json.IndexOf(':', index + key.Length);
+			if (colonIndex < 0) return null;
+
+			var quoteStart = json.IndexOf('"', colonIndex + 1);
+			if (quoteStart < 0) return null;
+
+			var quoteEnd = json.IndexOf('"', quoteStart + 1);
+			if (quoteEnd < 0) return null;
+
+			return json.Substring(quoteStart + 1, quoteEnd - quoteStart - 1);
 		}
 	}
 }

@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2026-03-24
+
+### Added
+- Version number display in header bar next to pkglnk.dev brand
+- Automatic update detection via GitHub releases API on window open
+- One-click update to latest version via highlighted version label
+- Platform source icons (GitHub, GitLab) on package card footers using PNG assets
+- Download icon on card install button replacing text label
+- Bookmark and install button tooltips
+- Periodic image recheck for packages without card images (60s interval)
+- VersionUtils for semver comparison and installed version reading
+
+### Changed
+- Install button on cards now shows download icon instead of "Install" text
+- Platform icons loaded from PNG assets instead of procedural bitmaps for GitHub and GitLab
+
 ## [0.7.0] - 2026-03-23
 
 ### Added

@@ -50,6 +50,18 @@
     color: #ecfdf5;
 }
 
+.header-version {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.3);
+    margin-left: 6px;
+    -unity-text-align: middle-left;
+}
+
+.header-version-update {
+    color: #10b981;
+    -unity-font-style: bold;
+}
+
 .header-auth-row {
     flex-direction: row;
     align-items: center;
@@ -545,7 +557,7 @@
 
 .install-button-icon {
     width: 14px;
-    height: 14px;
+    height: 18px;
     -unity-background-scale-mode: scale-to-fit;
     -unity-background-image-tint-color: #ffffff;
 }

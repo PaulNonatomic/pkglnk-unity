@@ -17,6 +17,14 @@
     color: #e0e0e0;
 }
 
+.header-version {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.header-version-update {
+    color: #d0d0d0;
+}
+
 .sign-in-button {
     background-color: #707070;
 }

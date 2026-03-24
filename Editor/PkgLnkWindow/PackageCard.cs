@@ -18,10 +18,13 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		public PackageData Package { get; private set; }
 
+		private const long ImageRecheckIntervalMs = 60_000;
+
 		private readonly Action<PackageCard> _onClicked;
 		private readonly Action<string> _onTopicClicked;
 		private readonly Action<PackageCard> _onInstallClicked;
 		private readonly Action<PackageCard> _onBookmarkClicked;
+		private readonly Action<PackageCard> _onImageRecheck;
 
 		// Ghost skeleton
 		private readonly VisualElement _ghostBody;
@@ -58,17 +61,20 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private bool _isInstalled;
 		private bool _isBookmarked;
 		private bool _isGhost = true;
+		private IVisualElementScheduledItem _imageRecheckTask;
 
 		public PackageCard(
 			Action<PackageCard> onClicked,
 			Action<string> onTopicClicked,
 			Action<PackageCard> onInstallClicked,
-			Action<PackageCard> onBookmarkClicked)
+			Action<PackageCard> onBookmarkClicked,
+			Action<PackageCard> onImageRecheck = null)
 		{
 			_onClicked = onClicked;
 			_onTopicClicked = onTopicClicked;
 			_onInstallClicked = onInstallClicked;
 			_onBookmarkClicked = onBookmarkClicked;
+			_onImageRecheck = onImageRecheck;
 
 			AddToClassList("package-card");
 			AddToClassList("package-card-ghost");
@@ -142,6 +148,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_onBookmarkClicked?.Invoke(this);
 			});
 			_bookmarkButton.text = string.Empty;
+			_bookmarkButton.tooltip = "Bookmark";
 			_bookmarkButton.AddToClassList("bookmark-button");
 			_bookmarkButton.style.display = DisplayStyle.None;
 			_bookmarkButton.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
@@ -233,6 +240,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_installButton = new Button(() => _onInstallClicked?.Invoke(this));
 			_installButton.text = string.Empty;
+			_installButton.tooltip = "Install";
 			_installButton.AddToClassList("install-button");
 			footer.Add(_installButton);
 
@@ -262,6 +270,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_boundOwner = null;
 			_boundRepo = null;
 			_boundInstallCount = -1;
+			CancelImageRecheck();
 			_cardBody.style.display = DisplayStyle.None;
 			_ghostBody.style.display = DisplayStyle.Flex;
 			AddToClassList("package-card-ghost");
@@ -327,6 +336,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					});
 				}
 			}
+
+			// Schedule periodic recheck for packages with no image
+			if (string.IsNullOrEmpty(imageUrl))
+				ScheduleImageRecheck();
+			else
+				CancelImageRecheck();
 
 			_nameLabel.text = pkg.display_name;
 
@@ -502,6 +517,25 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_topicsInner.style.left = current;
 
 			evt.StopPropagation();
+		}
+
+		private void ScheduleImageRecheck()
+		{
+			if (_onImageRecheck == null) return;
+			CancelImageRecheck();
+			_imageRecheckTask = schedule.Execute(() =>
+			{
+				if (_isGhost || Package == null) return;
+				if (!string.IsNullOrEmpty(Package.card_image_url)) return;
+				_onImageRecheck.Invoke(this);
+			}).StartingIn(ImageRecheckIntervalMs).Every(ImageRecheckIntervalMs);
+		}
+
+		private void CancelImageRecheck()
+		{
+			if (_imageRecheckTask == null) return;
+			_imageRecheckTask.Pause();
+			_imageRecheckTask = null;
 		}
 
 		private static string GetAvatarUrl(string platform, string owner)

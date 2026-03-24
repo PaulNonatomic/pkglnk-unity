@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Nonatomic.PkgLnk.Editor.Api;
 using Nonatomic.PkgLnk.Editor.Utils;
 using UnityEditor;
+using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -45,6 +46,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private const float PrefetchViewportMultiplier = 3f;
 
 		// Header
+		private readonly Label _versionLabel;
 		private readonly VisualElement _authRow;
 		private readonly Button _profileButton;
 		private readonly VisualElement _avatarImage;
@@ -178,6 +180,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var brandLabel = new Label("pkglnk.dev");
 			brandLabel.AddToClassList("header-brand");
 			brandRow.Add(brandLabel);
+
+			var installedVersion = VersionUtils.GetInstalledVersion();
+			_versionLabel = new Label(!string.IsNullOrEmpty(installedVersion) ? $"v{installedVersion}" : string.Empty);
+			_versionLabel.AddToClassList("header-version");
+			brandRow.Add(_versionLabel);
+			CheckForUpdate(installedVersion);
 
 			_authRow = new VisualElement();
 			_authRow.AddToClassList("header-auth-row");
@@ -429,6 +437,57 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		public void AddToHeader(VisualElement element)
 		{
 			_authRow.Add(element);
+		}
+
+		private void CheckForUpdate(string installedVersion)
+		{
+			if (string.IsNullOrEmpty(installedVersion)) return;
+
+			PkgLnkApiClient.FetchLatestVersion("PaulNonatomic", "pkglnk-unity", (latestTag, error) =>
+			{
+				if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(latestTag)) return;
+
+				var latestVersion = VersionUtils.StripPrefix(latestTag);
+				if (!VersionUtils.IsNewer(latestVersion, installedVersion)) return;
+
+				_versionLabel.text = $"v{installedVersion} \u2192 v{latestVersion}";
+				_versionLabel.tooltip = $"Click to update to v{latestVersion}";
+				_versionLabel.AddToClassList("header-version-update");
+				_versionLabel.RegisterCallback<ClickEvent>(_ => TriggerUpdate(latestTag));
+			});
+		}
+
+		private void TriggerUpdate(string versionTag)
+		{
+			_versionLabel.text = "Updating...";
+			_versionLabel.tooltip = string.Empty;
+			_versionLabel.SetEnabled(false);
+
+			var tag = versionTag.StartsWith("v") || versionTag.StartsWith("V")
+				? versionTag
+				: $"v{versionTag}";
+			var url = $"https://github.com/PaulNonatomic/pkglnk-unity.git#{tag}";
+			var request = Client.Add(url);
+
+			EditorApplication.update += PollUpdate;
+
+			void PollUpdate()
+			{
+				if (!request.IsCompleted) return;
+				EditorApplication.update -= PollUpdate;
+
+				if (request.Status == StatusCode.Success)
+				{
+					_versionLabel.text = $"v{VersionUtils.StripPrefix(versionTag)}";
+					_versionLabel.RemoveFromClassList("header-version-update");
+				}
+				else
+				{
+					_versionLabel.text = "Update failed";
+				}
+
+				_versionLabel.SetEnabled(true);
+			}
 		}
 
 		public void RefreshInstalledState()
@@ -1194,7 +1253,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			while (_cardPool.Count < needed)
 			{
-				var card = new PackageCard(OnCardClicked, OnTopicClicked, OnInstallClicked, OnBookmarkClicked);
+				var card = new PackageCard(OnCardClicked, OnTopicClicked, OnInstallClicked, OnBookmarkClicked, OnImageRecheck);
 				card.style.display = DisplayStyle.None;
 				_cardPool.Add(card);
 				_cardContainer.Add(card);
@@ -1230,6 +1289,49 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_detailView.Show(card.Package, installCount);
 			_listView.style.display = DisplayStyle.None;
 			_detailView.style.display = DisplayStyle.Flex;
+		}
+
+		private void OnImageRecheck(PackageCard card)
+		{
+			if (card.Package == null) return;
+			var slug = card.Package.slug;
+
+			PkgLnkApiClient.FetchDirectory(slug, null, 1, 10, (response, error) =>
+			{
+				if (!string.IsNullOrEmpty(error) || response?.packages == null) return;
+
+				foreach (var freshPkg in response.packages)
+				{
+					if (freshPkg.slug != slug) continue;
+					if (string.IsNullOrEmpty(freshPkg.card_image_url)) break;
+
+					// Update stored package data
+					for (var i = 0; i < _allPackages.Count; i++)
+					{
+						if (_allPackages[i].slug != slug) continue;
+						_allPackages[i] = freshPkg;
+						break;
+					}
+
+					for (var i = 0; i < _filteredPackages.Count; i++)
+					{
+						if (_filteredPackages[i].slug != slug) continue;
+						_filteredPackages[i] = freshPkg;
+						break;
+					}
+
+					// Rebind the card if it's still showing this package
+					if (card.Package?.slug == slug)
+					{
+						_installCounts.TryGetValue(freshPkg.id, out var installCount);
+						var isBookmarked = _bookmarkedIds.Contains(freshPkg.id);
+						var showBookmark = PkgLnkAuth.IsLoggedIn && _activeTab != BrowseTab.MyPackages;
+						card.Bind(freshPkg, installCount, isBookmarked, showBookmark);
+					}
+
+					break;
+				}
+			});
 		}
 
 		private void OnBackToList()
