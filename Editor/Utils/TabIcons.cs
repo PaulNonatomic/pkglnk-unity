@@ -1,3 +1,4 @@
+using UnityEditor;
 using UnityEngine;
 
 namespace Nonatomic.PkgLnk.Editor.Utils
@@ -13,12 +14,30 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 		private static Texture2D _grid;
 		private static Texture2D _sun;
 		private static Texture2D _moon;
+		private static Texture2D _download;
+		private static Texture2D _github;
+		private static Texture2D _gitlab;
+		private static Texture2D _bitbucket;
 
 		public static Texture2D Compass => _compass ??= Generate(CompassBitmap);
 		public static Texture2D Folder => _folder ??= Generate(FolderBitmap);
 		public static Texture2D Grid => _grid ??= Generate(GridBitmap);
 		public static Texture2D Sun => _sun ??= Generate(SunBitmap);
 		public static Texture2D Moon => _moon ??= Generate(MoonBitmap);
+		public static Texture2D Download => _download ??= Generate(DownloadBitmap);
+		public static Texture2D GitHub => _github ??= LoadAsset("source-icon-github.png");
+		public static Texture2D GitLab => _gitlab ??= LoadAsset("source-icon-gitlab.png");
+		public static Texture2D Bitbucket => _bitbucket ??= Generate(BitbucketBitmap);
+
+		public static Texture2D GetPlatformIcon(string platform)
+		{
+			return platform switch
+			{
+				"gitlab" => GitLab,
+				"bitbucket" => Bitbucket,
+				_ => GitHub
+			};
+		}
 
 		// Compass icon (Directory) — circle with diamond, matches pkglnk.dev desktop nav
 		private static readonly string[] CompassBitmap =
@@ -114,6 +133,50 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			"....######....",
 			"..............",
 		};
+
+		// Download arrow (Feather download icon) — matches pkglnk.dev install button
+		private static readonly string[] DownloadBitmap =
+		{
+			"......##......",
+			"......##......",
+			"......##......",
+			"......##......",
+			"......##......",
+			"..#...##...#..",
+			"...#..##..#...",
+			"....######....",
+			"..............",
+			"..............",
+			".##........##.",
+			".#..........#.",
+			".#..........#.",
+			"..############",
+		};
+
+		// Bitbucket bucket
+		private static readonly string[] BitbucketBitmap =
+		{
+			"..............",
+			".############.",
+			".#..........#.",
+			"..#........#..",
+			"..#........#..",
+			"..#........#..",
+			"...#......#...",
+			"...#......#...",
+			"...#......#...",
+			"....#....#....",
+			"....#....#....",
+			".....####.....",
+			"......##......",
+			"..............",
+		};
+
+		private static Texture2D LoadAsset(string filename)
+		{
+			return AssetDatabase.LoadAssetAtPath<Texture2D>(
+				$"Packages/com.nonatomic.pkglnk/Editor/Icons/{filename}");
+		}
 
 		private static Texture2D Generate(string[] bitmap)
 		{

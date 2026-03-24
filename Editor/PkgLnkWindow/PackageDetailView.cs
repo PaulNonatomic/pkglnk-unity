@@ -19,6 +19,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly Action<PackageData> _onAddToCollection;
 
 		private readonly Label _titleLabel;
+		private readonly VisualElement _platformIcon;
 		private readonly Label _platformLabel;
 		private readonly Label _ownerLabel;
 		private readonly Label _descriptionLabel;
@@ -67,6 +68,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_titleLabel = new Label();
 			_titleLabel.AddToClassList("detail-title");
 			titleRow.Add(_titleLabel);
+
+			_platformIcon = new VisualElement();
+			_platformIcon.AddToClassList("detail-platform-icon");
+			titleRow.Add(_platformIcon);
 
 			_platformLabel = new Label();
 			_platformLabel.AddToClassList("detail-platform-badge");
@@ -214,6 +219,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			}
 
 			_titleLabel.text = pkg.display_name;
+			_platformIcon.style.backgroundImage = new StyleBackground(TabIcons.GetPlatformIcon(pkg.git_platform));
 			_platformLabel.text = pkg.git_platform;
 			_ownerLabel.text = $"{pkg.git_owner}/{pkg.git_repo}";
 

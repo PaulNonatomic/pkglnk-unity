@@ -36,10 +36,13 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly Label _nameLabel;
 		private readonly Label _descLabel;
 		private readonly VisualElement _topicsRow;
+		private readonly VisualElement _topicsInner;
 		private readonly Label[] _topicLabels = new Label[MaxTopics];
+		private readonly VisualElement _platformIcon;
 		private readonly Label _repoLabel;
 		private readonly Label _updatedLabel;
 		private readonly Button _installButton;
+		private readonly VisualElement _installButtonIcon;
 		private readonly Button _bookmarkButton;
 		private readonly VisualElement _bookmarkIcon;
 
@@ -189,6 +192,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_topicsRow.style.display = DisplayStyle.None;
 			_cardBody.Add(_topicsRow);
 
+			_topicsInner = new VisualElement();
+			_topicsInner.AddToClassList("topic-tags-inner");
+			_topicsRow.Add(_topicsInner);
+
+			_topicsRow.RegisterCallback<WheelEvent>(OnTopicsWheel);
+
 			for (var i = 0; i < MaxTopics; i++)
 			{
 				var topicLabel = new Label();
@@ -200,7 +209,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					evt.StopPropagation();
 					_onTopicClicked?.Invoke(_topicLabels[index].text);
 				});
-				_topicsRow.Add(topicLabel);
+				_topicsInner.Add(topicLabel);
 				_topicLabels[i] = topicLabel;
 			}
 
@@ -208,6 +217,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var footer = new VisualElement();
 			footer.AddToClassList("card-footer");
 			_cardBody.Add(footer);
+
+			_platformIcon = new VisualElement();
+			_platformIcon.AddToClassList("card-platform-icon");
+			footer.Add(_platformIcon);
 
 			_repoLabel = new Label();
 			_repoLabel.AddToClassList("repo-label");
@@ -219,8 +232,20 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			footer.Add(_updatedLabel);
 
 			_installButton = new Button(() => _onInstallClicked?.Invoke(this));
+			_installButton.text = string.Empty;
 			_installButton.AddToClassList("install-button");
 			footer.Add(_installButton);
+
+			_installButtonIcon = new VisualElement();
+			_installButtonIcon.AddToClassList("install-button-icon");
+			_installButtonIcon.pickingMode = PickingMode.Ignore;
+			var downloadTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+				"Packages/com.nonatomic.pkglnk/Editor/Icons/download-icon.png");
+			if (downloadTex != null)
+			{
+				_installButtonIcon.style.backgroundImage = new StyleBackground(downloadTex);
+			}
+			_installButton.Add(_installButtonIcon);
 		}
 
 		/// <summary>
@@ -335,6 +360,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			}
 
 			_topicsRow.style.display = visibleTopics > 0 ? DisplayStyle.Flex : DisplayStyle.None;
+			_topicsInner.style.left = 0;
 
 			// Footer — skip string allocation when unchanged
 			if (pkg.git_owner != _boundOwner || pkg.git_repo != _boundRepo)
@@ -342,6 +368,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_boundOwner = pkg.git_owner;
 				_boundRepo = pkg.git_repo;
 				_repoLabel.text = $"{pkg.git_owner}/{pkg.git_repo}";
+				_platformIcon.style.backgroundImage = new StyleBackground(TabIcons.GetPlatformIcon(pkg.git_platform));
 			}
 
 			if (installCount != _boundInstallCount)
@@ -397,6 +424,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_installButton.text = "Installing...";
 				_installButton.SetEnabled(false);
 				_installButton.RemoveFromClassList("installed-button");
+				_installButtonIcon.style.display = DisplayStyle.None;
 			}
 			else
 			{
@@ -413,12 +441,15 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			{
 				case InstallPhase.Resolving:
 					_installButton.text = "Resolving...";
+					_installButtonIcon.style.display = DisplayStyle.None;
 					break;
 				case InstallPhase.Downloading:
 					_installButton.text = "Downloading...";
+					_installButtonIcon.style.display = DisplayStyle.None;
 					break;
 				case InstallPhase.Importing:
 					_installButton.text = "Importing...";
+					_installButtonIcon.style.display = DisplayStyle.None;
 					break;
 				case InstallPhase.Complete:
 					_isInstalled = true;
@@ -443,13 +474,34 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_installButton.text = "Installed";
 				_installButton.SetEnabled(false);
 				_installButton.AddToClassList("installed-button");
+				_installButtonIcon.style.display = DisplayStyle.None;
 			}
 			else
 			{
-				_installButton.text = "Install";
+				_installButton.text = string.Empty;
 				_installButton.SetEnabled(true);
 				_installButton.RemoveFromClassList("installed-button");
+				_installButtonIcon.style.display = DisplayStyle.Flex;
 			}
+		}
+
+		private void OnTopicsWheel(WheelEvent evt)
+		{
+			var innerWidth = _topicsInner.resolvedStyle.width;
+			var outerWidth = _topicsRow.resolvedStyle.width;
+			if (float.IsNaN(innerWidth) || float.IsNaN(outerWidth)) return;
+
+			var maxScroll = innerWidth - outerWidth;
+			if (maxScroll <= 0) return;
+
+			var current = _topicsInner.resolvedStyle.left;
+			if (float.IsNaN(current)) current = 0f;
+
+			current -= evt.delta.y * 20f;
+			current = Mathf.Clamp(current, -maxScroll, 0f);
+			_topicsInner.style.left = current;
+
+			evt.StopPropagation();
 		}
 
 		private static string GetAvatarUrl(string platform, string owner)

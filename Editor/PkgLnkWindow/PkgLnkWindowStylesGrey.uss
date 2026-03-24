@@ -237,6 +237,10 @@
     border-top-color: rgba(255, 255, 255, 0.06);
 }
 
+.card-platform-icon {
+    -unity-background-image-tint-color: #808080;
+}
+
 .repo-label {
     color: #808080;
 }
@@ -280,6 +284,10 @@
 .detail-image-area {
     background-color: #222222;
     border-color: rgba(255, 255, 255, 0.06);
+}
+
+.detail-platform-icon {
+    -unity-background-image-tint-color: #b0b0b0;
 }
 
 .detail-platform-badge {
