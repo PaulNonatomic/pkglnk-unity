@@ -13,10 +13,15 @@ Add **PkgLnk** to your Unity project via Package Manager:
 2. Click **+** > **Add package from git URL**
 3. Enter:
 ```
-https://www.pkglnk.dev/track/pkglnk-unity.git
+https://www.pkglnk.dev/pkglnk-unity.git
 ```
 
-[![pkglnk](https://www.pkglnk.dev/card/pkglnk-unity.svg?variant=install)](https://www.pkglnk.dev/pkg/pkglnk-unity)
+[![pkglnk](https://www.pkglnk.dev/card/pkglnk-unity.svg)](https://www.pkglnk.dev/pkg/pkglnk-unity)
+
+## Support
+If you like my work then please consider showing your support by buying me a brew
+<br><br>
+<a href="https://www.buymeacoffee.com/nonatomic" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-green.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## Features
 
