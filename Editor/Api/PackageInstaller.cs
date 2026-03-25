@@ -67,7 +67,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		private static HashSet<string> _installedSlugsCache;
 		private static HashSet<string> _installedReposCache;
 		private static double _installedCacheTime;
-		private const double InstalledCacheTtl = 2.0;
+		private const double InstalledCacheTtl = 10.0;
 		private const string TrackUrlPrefix = "https://pkglnk.dev/track/";
 		private const string GitHubUrlPrefix = "https://github.com/";
 

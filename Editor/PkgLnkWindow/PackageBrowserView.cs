@@ -1182,7 +1182,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 						{
 							_installCounts.TryGetValue(pkg.id, out var installCount);
 							var isBookmarked = _bookmarkedIds.Contains(pkg.id);
-							card.Bind(pkg, installCount, isBookmarked, showBookmark);
+							var isInstalled = PackageInstaller.IsInstalled(pkg);
+							card.Bind(pkg, installCount, isBookmarked, showBookmark, isInstalled);
 						}
 					}
 					else
@@ -1326,7 +1327,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 						_installCounts.TryGetValue(freshPkg.id, out var installCount);
 						var isBookmarked = _bookmarkedIds.Contains(freshPkg.id);
 						var showBookmark = PkgLnkAuth.IsLoggedIn && _activeTab != BrowseTab.MyPackages;
-						card.Bind(freshPkg, installCount, isBookmarked, showBookmark);
+						var isInstalled = PackageInstaller.IsInstalled(freshPkg);
+						card.Bind(freshPkg, installCount, isBookmarked, showBookmark, isInstalled);
 					}
 
 					break;

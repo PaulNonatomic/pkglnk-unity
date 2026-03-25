@@ -279,8 +279,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		/// <summary>
 		/// Binds to package data. Zero DOM allocations — only text/style updates.
+		/// Accepts pre-computed installed state to avoid per-card lookups during scroll.
 		/// </summary>
-		public void Bind(PackageData pkg, int installCount, bool isBookmarked, bool showBookmark)
+		public void Bind(PackageData pkg, int installCount, bool isBookmarked, bool showBookmark, bool isInstalled)
 		{
 			if (_isGhost)
 			{
@@ -395,7 +396,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			}
 
 			// Install state
-			_isInstalled = PackageInstaller.IsInstalled(pkg);
+			_isInstalled = isInstalled;
 			UpdateButtonDisplay();
 			UpdateInstalledHighlight();
 
@@ -522,7 +523,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private void ScheduleImageRecheck()
 		{
 			if (_onImageRecheck == null) return;
-			CancelImageRecheck();
+			if (_imageRecheckTask != null) return;
 			_imageRecheckTask = schedule.Execute(() =>
 			{
 				if (_isGhost || Package == null) return;

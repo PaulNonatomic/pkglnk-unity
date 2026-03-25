@@ -54,6 +54,7 @@
     font-size: 10px;
     color: rgba(255, 255, 255, 0.3);
     margin-left: 6px;
+    padding-top: 2px;
     -unity-text-align: middle-left;
 }
 
