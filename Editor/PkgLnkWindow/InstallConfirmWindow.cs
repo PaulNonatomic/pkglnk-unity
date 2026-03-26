@@ -325,8 +325,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		}
 
 		/// <summary>
-		/// Extracts the slug from a pkglnk tracking URL.
-		/// E.g. "https://www.pkglnk.dev/track/my-package.git#upm" → "my-package"
+		/// Extracts the slug from a pkglnk install URL.
+		/// E.g. "https://www.pkglnk.dev/my-package.git#upm" → "my-package"
 		/// </summary>
 		internal static string ParseSlugFromUrl(string url)
 		{
@@ -334,8 +334,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		}
 
 		/// <summary>
-		/// Parses a pkglnk tracking URL into a PackageData with slug, git_path, and git_ref.
-		/// E.g. "https://www.pkglnk.dev/track/my-pkg.git?path=Assets/Pkg#v1.0" →
+		/// Parses a pkglnk install URL into a PackageData with slug, git_path, and git_ref.
+		/// E.g. "https://www.pkglnk.dev/my-pkg.git?path=Assets/Pkg#v1.0" →
 		///   { slug="my-pkg", git_path="Assets/Pkg", git_ref="v1.0" }
 		/// </summary>
 		internal static PackageData ParsePackageDataFromUrl(string url)
@@ -343,7 +343,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var prefixes = new[]
 			{
 				"https://pkglnk.dev/track/",
-				"https://www.pkglnk.dev/track/"
+				"https://www.pkglnk.dev/track/",
+				"https://pkglnk.dev/",
+				"https://www.pkglnk.dev/"
 			};
 
 			var remainder = url;

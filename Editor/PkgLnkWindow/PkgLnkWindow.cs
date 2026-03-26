@@ -39,6 +39,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		public void CreateGUI()
 		{
+			minSize = new Vector2(480, 600);
+
 			var root = rootVisualElement;
 
 			var baseSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(

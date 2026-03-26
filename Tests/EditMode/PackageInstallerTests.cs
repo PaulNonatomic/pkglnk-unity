@@ -11,7 +11,7 @@ namespace Tests.EditMode
 		{
 			var pkg = new PackageData { slug = "my-package" };
 			var url = PackageInstaller.BuildInstallUrl(pkg);
-			Assert.AreEqual("https://pkglnk.dev/track/my-package.git", url);
+			Assert.AreEqual("https://pkglnk.dev/my-package.git", url);
 		}
 
 		[Test]
@@ -24,7 +24,7 @@ namespace Tests.EditMode
 			};
 
 			var url = PackageInstaller.BuildInstallUrl(pkg);
-			Assert.That(url, Does.StartWith("https://pkglnk.dev/track/mono-repo-pkg.git?path="));
+			Assert.That(url, Does.StartWith("https://pkglnk.dev/mono-repo-pkg.git?path="));
 			Assert.That(url, Does.Contain("Packages"));
 		}
 
@@ -38,7 +38,7 @@ namespace Tests.EditMode
 			};
 
 			var url = PackageInstaller.BuildInstallUrl(pkg);
-			Assert.AreEqual("https://pkglnk.dev/track/versioned-pkg.git#v1.0.0", url);
+			Assert.AreEqual("https://pkglnk.dev/versioned-pkg.git#v1.0.0", url);
 		}
 
 		[Test]
@@ -52,7 +52,7 @@ namespace Tests.EditMode
 			};
 
 			var url = PackageInstaller.BuildInstallUrl(pkg);
-			Assert.That(url, Does.StartWith("https://pkglnk.dev/track/full-pkg.git?path="));
+			Assert.That(url, Does.StartWith("https://pkglnk.dev/full-pkg.git?path="));
 			Assert.That(url, Does.EndWith("#main"));
 		}
 
@@ -67,7 +67,7 @@ namespace Tests.EditMode
 			};
 
 			var url = PackageInstaller.BuildInstallUrl(pkg);
-			Assert.AreEqual("https://pkglnk.dev/track/simple.git", url);
+			Assert.AreEqual("https://pkglnk.dev/simple.git", url);
 		}
 	}
 }

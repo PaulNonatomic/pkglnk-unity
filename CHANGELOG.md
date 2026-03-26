@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.1] - 2026-03-25
+
+### Changed
+- Install URLs now use `https://pkglnk.dev/{slug}.git` format (removed `/track/` path segment)
+- Legacy `/track/` URLs still recognised for backwards compatibility with existing installs
+- Improved scroll performance by increasing installed-package cache TTL and optimising card binding
+
 ## [0.8.0] - 2026-03-24
 
 ### Added

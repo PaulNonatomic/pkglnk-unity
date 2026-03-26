@@ -27,6 +27,8 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		};
 		private static readonly string[] AllowedUrlPrefixes =
 		{
+			"https://pkglnk.dev/",
+			"https://www.pkglnk.dev/",
 			"https://pkglnk.dev/track/",
 			"https://www.pkglnk.dev/track/"
 		};

@@ -44,11 +44,11 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		/// <summary>
 		/// Builds the UPM git install URL for a package.
-		/// Format: https://pkglnk.dev/track/{slug}.git[?path={git_path}][#{git_ref}]
+		/// Format: https://pkglnk.dev/{slug}.git[?path={git_path}][#{git_ref}]
 		/// </summary>
 		public static string BuildInstallUrl(PackageData pkg)
 		{
-			var sb = new StringBuilder($"https://pkglnk.dev/track/{pkg.slug}.git");
+			var sb = new StringBuilder($"https://pkglnk.dev/{pkg.slug}.git");
 
 			if (!string.IsNullOrEmpty(pkg.git_path))
 			{
@@ -68,7 +68,8 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		private static HashSet<string> _installedReposCache;
 		private static double _installedCacheTime;
 		private const double InstalledCacheTtl = 10.0;
-		private const string TrackUrlPrefix = "https://pkglnk.dev/track/";
+		private const string PkgLnkUrlPrefix = "https://pkglnk.dev/";
+		private const string LegacyTrackUrlPrefix = "https://pkglnk.dev/track/";
 		private const string GitHubUrlPrefix = "https://github.com/";
 
 		/// <summary>
@@ -135,10 +136,15 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 			var url = packageId.Substring(atIndex + 1);
 
-			if (url.StartsWith(TrackUrlPrefix, StringComparison.OrdinalIgnoreCase))
+			if (url.StartsWith(LegacyTrackUrlPrefix, StringComparison.OrdinalIgnoreCase))
 			{
-				var slug = StripGitSuffix(url.Substring(TrackUrlPrefix.Length));
+				var slug = StripGitSuffix(url.Substring(LegacyTrackUrlPrefix.Length));
 				if (!string.IsNullOrEmpty(slug)) _installedSlugsCache.Add(slug);
+			}
+			else if (url.StartsWith(PkgLnkUrlPrefix, StringComparison.OrdinalIgnoreCase))
+			{
+				var slug = StripGitSuffix(url.Substring(PkgLnkUrlPrefix.Length));
+				if (!string.IsNullOrEmpty(slug) && !slug.Contains("/")) _installedSlugsCache.Add(slug);
 			}
 
 			if (url.StartsWith(GitHubUrlPrefix, StringComparison.OrdinalIgnoreCase))
