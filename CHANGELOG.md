@@ -2,12 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.2] - 2026-03-26
+
+### Changed
+- Scroll performance: position caching skips redundant style writes on cards that haven't moved
+- Scroll performance: card width/height set once on layout instead of every scroll frame
+- Scroll performance: display visibility caching avoids writes on already-visible/hidden cards
+- Scroll performance: install, bookmark, and description state guards skip unchanged class/style updates
+- Scroll performance: increased installed-package cache TTL from 2s to 10s
+
 ## [0.8.1] - 2026-03-25
 
 ### Changed
 - Install URLs now use `https://pkglnk.dev/{slug}.git` format (removed `/track/` path segment)
 - Legacy `/track/` URLs still recognised for backwards compatibility with existing installs
-- Improved scroll performance by increasing installed-package cache TTL and optimising card binding
 
 ## [0.8.0] - 2026-03-24
 
