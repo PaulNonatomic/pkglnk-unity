@@ -58,10 +58,17 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private string _boundOwner;
 		private string _boundRepo;
 		private int _boundInstallCount = -1;
+		private bool _boundHasDesc;
+		private bool _boundShowBookmark;
 		private bool _isInstalled;
 		private bool _isBookmarked;
 		private bool _isGhost = true;
 		private IVisualElementScheduledItem _imageRecheckTask;
+
+		// Position cache — avoids redundant style writes during scroll
+		private float _posTop = float.NaN;
+		private float _posLeft = float.NaN;
+		private bool _posVisible;
 
 		public PackageCard(
 			Action<PackageCard> onClicked,
@@ -257,6 +264,48 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		}
 
 		/// <summary>
+		/// Updates grid position, skipping style writes when values are unchanged.
+		/// </summary>
+		public void SetGridPosition(float top, float left)
+		{
+			// ReSharper disable CompareOfFloatsByEqualityOperator
+			if (_posTop != top) { style.top = top; _posTop = top; }
+			if (_posLeft != left) { style.left = left; _posLeft = left; }
+			// ReSharper restore CompareOfFloatsByEqualityOperator
+			if (_posVisible) return;
+			style.display = DisplayStyle.Flex;
+			_posVisible = true;
+		}
+
+		/// <summary>
+		/// Sets card width/height. Call only when layout dimensions change, not per scroll frame.
+		/// </summary>
+		public void SetGridSize(float width, float height)
+		{
+			style.width = width;
+			style.height = height;
+		}
+
+		/// <summary>
+		/// Hides the card, skipping the style write if already hidden.
+		/// </summary>
+		public void HideCard()
+		{
+			if (!_posVisible) return;
+			style.display = DisplayStyle.None;
+			_posVisible = false;
+		}
+
+		/// <summary>
+		/// Invalidates cached position so the next SetGridPosition always writes.
+		/// </summary>
+		public void InvalidatePosition()
+		{
+			_posTop = float.NaN;
+			_posLeft = float.NaN;
+		}
+
+		/// <summary>
 		/// Switches to ghost skeleton. Zero allocations.
 		/// </summary>
 		public void ShowGhost()
@@ -270,6 +319,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_boundOwner = null;
 			_boundRepo = null;
 			_boundInstallCount = -1;
+			_boundHasDesc = false;
+			_boundShowBookmark = false;
+			_isInstalled = false;
+			_isBookmarked = false;
 			CancelImageRecheck();
 			_cardBody.style.display = DisplayStyle.None;
 			_ghostBody.style.display = DisplayStyle.Flex;
@@ -346,16 +399,16 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_nameLabel.text = pkg.display_name;
 
-			// Description
-			if (!string.IsNullOrEmpty(pkg.description))
+			// Description — guard class change to avoid USS recalc
+			var hasDesc = !string.IsNullOrEmpty(pkg.description);
+			_descLabel.text = hasDesc ? pkg.description : "No description";
+			if (hasDesc != _boundHasDesc)
 			{
-				_descLabel.text = pkg.description;
-				_descLabel.RemoveFromClassList("package-description-empty");
-			}
-			else
-			{
-				_descLabel.text = "No description";
-				_descLabel.AddToClassList("package-description-empty");
+				_boundHasDesc = hasDesc;
+				if (hasDesc)
+					_descLabel.RemoveFromClassList("package-description-empty");
+				else
+					_descLabel.AddToClassList("package-description-empty");
 			}
 
 			// Topics — reuse pre-allocated labels
@@ -395,14 +448,26 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					: "0 installs";
 			}
 
-			// Install state
-			_isInstalled = isInstalled;
-			UpdateButtonDisplay();
-			UpdateInstalledHighlight();
+			// Install state — skip redundant class/style changes
+			if (_isInstalled != isInstalled)
+			{
+				_isInstalled = isInstalled;
+				UpdateButtonDisplay();
+				UpdateInstalledHighlight();
+			}
 
-			// Bookmark state
-			UpdateBookmarkState(isBookmarked);
-			_bookmarkButton.style.display = showBookmark ? DisplayStyle.Flex : DisplayStyle.None;
+			// Bookmark state — skip redundant icon/class changes
+			if (_isBookmarked != isBookmarked)
+			{
+				UpdateBookmarkState(isBookmarked);
+			}
+
+			// Bookmark button visibility
+			if (_boundShowBookmark != showBookmark)
+			{
+				_boundShowBookmark = showBookmark;
+				_bookmarkButton.style.display = showBookmark ? DisplayStyle.Flex : DisplayStyle.None;
+			}
 		}
 
 		public void UpdateInstalledState(bool isInstalled)

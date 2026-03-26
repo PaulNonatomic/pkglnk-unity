@@ -494,7 +494,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			foreach (var card in _cardPool)
 			{
-				if (card.style.display == DisplayStyle.Flex && card.Package != null)
+				if (card.Package != null)
 				{
 					card.UpdateInstalledState(PackageInstaller.IsInstalled(card.Package));
 				}
@@ -1121,6 +1121,13 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_poolSize = neededPool;
 			}
 
+			// Layout changed — update card sizes and invalidate positions
+			foreach (var card in _cardPool)
+			{
+				card.SetGridSize(_cardWidth, _cardHeight);
+				card.InvalidatePosition();
+			}
+
 			PositionVisibleCards();
 		}
 
@@ -1162,6 +1169,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			for (var row = firstRow; row <= lastRow; row++)
 			{
+				var top = ContainerPadding + row * RowHeight;
+
 				for (var col = 0; col < _columns; col++)
 				{
 					var dataIndex = row * _columns + col;
@@ -1191,20 +1200,18 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 						card.ShowGhost();
 					}
 
-					card.style.top = ContainerPadding + row * RowHeight;
-					card.style.left = _centerOffset + col * (_cardWidth + CardGap);
-					card.style.width = _cardWidth;
-					card.style.height = _cardHeight;
-					card.style.display = DisplayStyle.Flex;
+					// Position — skips style writes when values are unchanged
+					var left = _centerOffset + col * (_cardWidth + CardGap);
+					card.SetGridPosition(top, left);
 				}
 			}
 
-			// Hide pool cards not in use
+			// Hide pool cards not in use — skips write when already hidden
 			for (var i = 0; i < _cardPool.Count; i++)
 			{
 				if (!_activePoolIndices.Contains(i))
 				{
-					_cardPool[i].style.display = DisplayStyle.None;
+					_cardPool[i].HideCard();
 				}
 			}
 		}
@@ -1265,7 +1272,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			foreach (var card in _cardPool)
 			{
-				card.style.display = DisplayStyle.None;
+				card.HideCard();
 			}
 		}
 
