@@ -195,8 +195,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_currentPackage = pkg;
 			_errorLabel.style.display = DisplayStyle.None;
 
-			// Image
-			var imageUrl = pkg.card_image_url ?? string.Empty;
+			// Image — use PNG fallback for unsupported formats (GIF, WebP)
+			var imageUrl = ResolveImageUrl(pkg);
 			if (imageUrl != _boundImageUrl)
 			{
 				_boundImageUrl = imageUrl;
@@ -381,6 +381,30 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_readmeTitle.style.display = DisplayStyle.Flex;
 			var rendered = MarkdownRenderer.Render(markdown, pkg.git_owner, pkg.git_repo, pkg.git_ref);
 			_readmeContainer.Add(rendered);
+		}
+
+		private static string ResolveImageUrl(PackageData pkg)
+		{
+			var url = pkg.card_image_url ?? string.Empty;
+			if (string.IsNullOrEmpty(url)) return string.Empty;
+
+			if (!IsUnsupportedImageFormat(url)) return url;
+
+			var fallback = pkg.card_image_png_url ?? string.Empty;
+			return !string.IsNullOrEmpty(fallback) ? fallback : url;
+		}
+
+		private static bool IsUnsupportedImageFormat(string url)
+		{
+			var end = url.Length;
+			var q = url.IndexOf('?');
+			if (q >= 0) end = q;
+			var h = url.IndexOf('#');
+			if (h >= 0 && h < end) end = h;
+
+			if (end >= 4 && url.Substring(end - 4, 4).Equals(".gif", StringComparison.OrdinalIgnoreCase)) return true;
+			if (end >= 5 && url.Substring(end - 5, 5).Equals(".webp", StringComparison.OrdinalIgnoreCase)) return true;
+			return false;
 		}
 	}
 }

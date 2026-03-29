@@ -54,6 +54,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly Button _signInButton;
 		private readonly VisualElement _profileDropdown;
 		private readonly Button _accountButton;
+		private readonly Button _starOnGitHubButton;
 		private readonly Button _signOutButton;
 
 		// Tabs
@@ -223,6 +224,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_accountButton.text = "Account";
 			_accountButton.AddToClassList("profile-dropdown-item");
 			_profileDropdown.Add(_accountButton);
+
+			_starOnGitHubButton = new Button(OnStarOnGitHubClicked);
+			_starOnGitHubButton.text = "\u2605  Star on GitHub";
+			_starOnGitHubButton.AddToClassList("profile-dropdown-item");
+			_starOnGitHubButton.AddToClassList("profile-dropdown-item-star");
+			_profileDropdown.Add(_starOnGitHubButton);
 
 			_signOutButton = new Button(OnSignOutClicked);
 			_signOutButton.text = "Sign Out";
@@ -674,6 +681,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			CloseProfileDropdown();
 			Application.OpenURL("https://pkglnk.dev/account");
+		}
+
+		private void OnStarOnGitHubClicked()
+		{
+			CloseProfileDropdown();
+			Application.OpenURL("https://github.com/PaulNonatomic/pkglnk-unity");
 		}
 
 		// ─── Login Modal ────────────────────────────────────────────────
@@ -1140,7 +1153,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			}
 
 			var totalRows = TotalVirtualRows();
-			if (totalRows == 0)
+			if (totalRows == 0 || _poolSize == 0)
 			{
 				HideAllPoolCards();
 				_prevFirstRow = -1;

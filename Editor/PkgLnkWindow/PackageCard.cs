@@ -368,8 +368,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				}
 			}
 
-			// Image — only reload when URL changes
-			var imageUrl = pkg.card_image_url ?? string.Empty;
+			// Image — use PNG fallback for unsupported formats (GIF, WebP)
+			var imageUrl = ResolveImageUrl(pkg);
 			if (imageUrl != _boundImageUrl)
 			{
 				_boundImageUrl = imageUrl;
@@ -552,16 +552,20 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			if (_isInstalled)
 			{
-				_installButton.text = "Installed";
+				_installButton.text = string.Empty;
+				_installButton.tooltip = "Installed";
 				_installButton.SetEnabled(false);
 				_installButton.AddToClassList("installed-button");
-				_installButtonIcon.style.display = DisplayStyle.None;
+				_installButtonIcon.style.backgroundImage = new StyleBackground(TabIcons.Checkmark);
+				_installButtonIcon.style.display = DisplayStyle.Flex;
 			}
 			else
 			{
 				_installButton.text = string.Empty;
+				_installButton.tooltip = "Install";
 				_installButton.SetEnabled(true);
 				_installButton.RemoveFromClassList("installed-button");
+				_installButtonIcon.style.backgroundImage = new StyleBackground(TabIcons.Download);
 				_installButtonIcon.style.display = DisplayStyle.Flex;
 			}
 		}
@@ -602,6 +606,34 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (_imageRecheckTask == null) return;
 			_imageRecheckTask.Pause();
 			_imageRecheckTask = null;
+		}
+
+		/// <summary>
+		/// Returns the best image URL for the card, preferring PNG fallback
+		/// when the primary URL is an unsupported format (GIF, WebP).
+		/// </summary>
+		private static string ResolveImageUrl(PackageData pkg)
+		{
+			var url = pkg.card_image_url ?? string.Empty;
+			if (string.IsNullOrEmpty(url)) return string.Empty;
+
+			if (!IsUnsupportedImageFormat(url)) return url;
+
+			var fallback = pkg.card_image_png_url ?? string.Empty;
+			return !string.IsNullOrEmpty(fallback) ? fallback : url;
+		}
+
+		private static bool IsUnsupportedImageFormat(string url)
+		{
+			var end = url.Length;
+			var q = url.IndexOf('?');
+			if (q >= 0) end = q;
+			var h = url.IndexOf('#');
+			if (h >= 0 && h < end) end = h;
+
+			if (end >= 4 && url.Substring(end - 4, 4).Equals(".gif", StringComparison.OrdinalIgnoreCase)) return true;
+			if (end >= 5 && url.Substring(end - 5, 5).Equals(".webp", StringComparison.OrdinalIgnoreCase)) return true;
+			return false;
 		}
 
 		private static string GetAvatarUrl(string platform, string owner)

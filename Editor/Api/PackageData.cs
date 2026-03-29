@@ -22,6 +22,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		public string[] topics = Array.Empty<string>();
 		public int github_stars;
 		public string card_image_url = string.Empty;
+		public string card_image_png_url = string.Empty;
 		public string updated_at = string.Empty;
 		public string created_at = string.Empty;
 		public bool is_private;

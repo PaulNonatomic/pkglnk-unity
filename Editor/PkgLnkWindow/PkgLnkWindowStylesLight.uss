@@ -68,6 +68,14 @@
     background-color: rgba(0, 0, 0, 0.04);
 }
 
+.profile-dropdown-item-star {
+    color: #059669;
+}
+
+.profile-dropdown-item-star:hover {
+    background-color: rgba(5, 150, 105, 0.06);
+}
+
 .profile-dropdown-item-danger {
     color: #dc2626;
 }

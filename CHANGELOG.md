@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.3] - 2026-03-30
+
+### Added
+- Star on GitHub button in profile dropdown with themed styling per colour scheme
+- GIF first-frame decoding for card images via GifDecoder
+- PNG fallback for card images when primary URL is an unsupported format (GIF, WebP)
+- Checkmark icon for installed packages replacing text label on card install button
+
+### Fixed
+- Pool size zero guard prevents layout error when no cards are allocated
+
 ## [0.8.2] - 2026-03-26
 
 ### Changed

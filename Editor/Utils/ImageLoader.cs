@@ -46,6 +46,18 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 
 			Pending[url] = new List<Action<Texture2D>> { onLoaded };
 
+			if (IsGifUrl(url))
+			{
+				LoadGif(url);
+			}
+			else
+			{
+				LoadTexture(url);
+			}
+		}
+
+		private static void LoadTexture(string url)
+		{
 			UnityWebRequest request;
 			UnityWebRequestAsyncOperation operation;
 
@@ -56,14 +68,11 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			}
 			catch (Exception ex)
 			{
-				var pending = Pending[url];
-				Pending.Remove(url);
+				FinishPending(url, null);
 				Debug.LogWarning($"[PkgLnk] Failed to load image {url}: {ex.Message}");
-				foreach (var cb in pending) cb?.Invoke(null);
 				return;
 			}
 
-			var capturedUrl = url;
 			operation.completed += _ =>
 			{
 				Texture2D texture = null;
@@ -71,20 +80,64 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 				if (request.result == UnityWebRequest.Result.Success)
 				{
 					texture = DownloadHandlerTexture.GetContent(request);
-					if (texture != null)
-					{
-						Cache[capturedUrl] = texture;
-					}
 				}
 
 				request.Dispose();
-
-				if (Pending.TryGetValue(capturedUrl, out var pending))
-				{
-					Pending.Remove(capturedUrl);
-					foreach (var cb in pending) cb?.Invoke(texture);
-				}
+				FinishPending(url, texture);
 			};
+		}
+
+		private static void LoadGif(string url)
+		{
+			UnityWebRequest request;
+			UnityWebRequestAsyncOperation operation;
+
+			try
+			{
+				request = UnityWebRequest.Get(url);
+				operation = request.SendWebRequest();
+			}
+			catch (Exception ex)
+			{
+				FinishPending(url, null);
+				Debug.LogWarning($"[PkgLnk] Failed to load GIF {url}: {ex.Message}");
+				return;
+			}
+
+			operation.completed += _ =>
+			{
+				Texture2D texture = null;
+
+				if (request.result == UnityWebRequest.Result.Success)
+				{
+					texture = GifDecoder.DecodeFirstFrame(request.downloadHandler.data);
+				}
+
+				request.Dispose();
+				FinishPending(url, texture);
+			};
+		}
+
+		private static void FinishPending(string url, Texture2D texture)
+		{
+			if (texture != null)
+			{
+				Cache[url] = texture;
+			}
+
+			if (!Pending.TryGetValue(url, out var pending)) return;
+			Pending.Remove(url);
+			foreach (var cb in pending) cb?.Invoke(texture);
+		}
+
+		private static bool IsGifUrl(string url)
+		{
+			var end = url.Length;
+			var q = url.IndexOf('?');
+			if (q >= 0) end = q;
+			var h = url.IndexOf('#');
+			if (h >= 0 && h < end) end = h;
+			return end >= 4 && url.Substring(end - 4, 4).Equals(".gif", StringComparison.OrdinalIgnoreCase);
 		}
 
 		/// <summary>Clears the entire image cache.</summary>

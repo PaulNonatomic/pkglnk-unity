@@ -18,6 +18,7 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 		private static Texture2D _github;
 		private static Texture2D _gitlab;
 		private static Texture2D _bitbucket;
+		private static Texture2D _checkmark;
 
 		public static Texture2D Compass => _compass ??= Generate(CompassBitmap);
 		public static Texture2D Folder => _folder ??= Generate(FolderBitmap);
@@ -25,6 +26,7 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 		public static Texture2D Sun => _sun ??= Generate(SunBitmap);
 		public static Texture2D Moon => _moon ??= Generate(MoonBitmap);
 		public static Texture2D Download => _download ??= Generate(DownloadBitmap);
+		public static Texture2D Checkmark => _checkmark ??= Generate(CheckmarkBitmap);
 		public static Texture2D GitHub => _github ??= LoadAsset("source-icon-github.png");
 		public static Texture2D GitLab => _gitlab ??= LoadAsset("source-icon-gitlab.png");
 		public static Texture2D Bitbucket => _bitbucket ??= Generate(BitbucketBitmap);
@@ -151,6 +153,25 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			".#..........#.",
 			".#..........#.",
 			"..############",
+		};
+
+		// Checkmark (installed indicator)
+		private static readonly string[] CheckmarkBitmap =
+		{
+			"..............",
+			"..............",
+			"..............",
+			"............#.",
+			"...........#..",
+			"..........#...",
+			".........#....",
+			".#......#.....",
+			"..#....#......",
+			"...#..#.......",
+			"....##........",
+			"..............",
+			"..............",
+			"..............",
 		};
 
 		// Bitbucket bucket
