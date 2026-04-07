@@ -551,6 +551,7 @@
     -unity-text-align: middle-center;
     margin-left: 8px;
     flex-shrink: 0;
+    justify-content: center;
 }
 
 .install-button:hover {
@@ -566,7 +567,9 @@
 
 .install-button-icon {
     width: 14px;
-    height: 18px;
+    height: 14px;
+    flex-shrink: 0;
+    align-self: center;
     -unity-background-scale-mode: scale-to-fit;
     -unity-background-image-tint-color: #ffffff;
 }

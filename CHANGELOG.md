@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.4] - 2026-04-07
+
+### Fixed
+- Download icon distortion on package card install buttons
+- Download icon vertical centering within install button
+
 ## [0.8.3] - 2026-03-30
 
 ### Added
