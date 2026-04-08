@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.5] - 2026-04-08
+
+### Fixed
+- Card images failing to load when source URL serves unsupported formats (GIF, WebP) without a matching file extension
+- Now always prefers server-optimised PNG for card images, falling back to original URL only when no PNG is available
+
 ## [0.8.4] - 2026-04-07
 
 ### Fixed

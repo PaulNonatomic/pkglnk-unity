@@ -368,7 +368,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				}
 			}
 
-			// Image — use PNG fallback for unsupported formats (GIF, WebP)
+			// Image — prefer server-optimised PNG for Unity compatibility
 			var imageUrl = ResolveImageUrl(pkg);
 			if (imageUrl != _boundImageUrl)
 			{
@@ -609,31 +609,17 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		}
 
 		/// <summary>
-		/// Returns the best image URL for the card, preferring PNG fallback
-		/// when the primary URL is an unsupported format (GIF, WebP).
+		/// Returns the best image URL for the card, preferring the server-optimised
+		/// PNG when available. The PNG fallback is generated server-side for Unity
+		/// compatibility and avoids format issues with extensionless URLs that may
+		/// redirect to GIF, WebP, or other formats Unity cannot decode.
 		/// </summary>
 		private static string ResolveImageUrl(PackageData pkg)
 		{
-			var url = pkg.card_image_url ?? string.Empty;
-			if (string.IsNullOrEmpty(url)) return string.Empty;
+			var pngUrl = pkg.card_image_png_url ?? string.Empty;
+			if (!string.IsNullOrEmpty(pngUrl)) return pngUrl;
 
-			if (!IsUnsupportedImageFormat(url)) return url;
-
-			var fallback = pkg.card_image_png_url ?? string.Empty;
-			return !string.IsNullOrEmpty(fallback) ? fallback : url;
-		}
-
-		private static bool IsUnsupportedImageFormat(string url)
-		{
-			var end = url.Length;
-			var q = url.IndexOf('?');
-			if (q >= 0) end = q;
-			var h = url.IndexOf('#');
-			if (h >= 0 && h < end) end = h;
-
-			if (end >= 4 && url.Substring(end - 4, 4).Equals(".gif", StringComparison.OrdinalIgnoreCase)) return true;
-			if (end >= 5 && url.Substring(end - 5, 5).Equals(".webp", StringComparison.OrdinalIgnoreCase)) return true;
-			return false;
+			return pkg.card_image_url ?? string.Empty;
 		}
 
 		private static string GetAvatarUrl(string platform, string owner)

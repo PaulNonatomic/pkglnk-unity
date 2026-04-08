@@ -195,7 +195,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_currentPackage = pkg;
 			_errorLabel.style.display = DisplayStyle.None;
 
-			// Image — use PNG fallback for unsupported formats (GIF, WebP)
+			// Image — prefer server-optimised PNG for Unity compatibility
 			var imageUrl = ResolveImageUrl(pkg);
 			if (imageUrl != _boundImageUrl)
 			{
@@ -383,28 +383,16 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_readmeContainer.Add(rendered);
 		}
 
+		/// <summary>
+		/// Returns the best image URL for the detail view, preferring the
+		/// server-optimised PNG when available for Unity compatibility.
+		/// </summary>
 		private static string ResolveImageUrl(PackageData pkg)
 		{
-			var url = pkg.card_image_url ?? string.Empty;
-			if (string.IsNullOrEmpty(url)) return string.Empty;
+			var pngUrl = pkg.card_image_png_url ?? string.Empty;
+			if (!string.IsNullOrEmpty(pngUrl)) return pngUrl;
 
-			if (!IsUnsupportedImageFormat(url)) return url;
-
-			var fallback = pkg.card_image_png_url ?? string.Empty;
-			return !string.IsNullOrEmpty(fallback) ? fallback : url;
-		}
-
-		private static bool IsUnsupportedImageFormat(string url)
-		{
-			var end = url.Length;
-			var q = url.IndexOf('?');
-			if (q >= 0) end = q;
-			var h = url.IndexOf('#');
-			if (h >= 0 && h < end) end = h;
-
-			if (end >= 4 && url.Substring(end - 4, 4).Equals(".gif", StringComparison.OrdinalIgnoreCase)) return true;
-			if (end >= 5 && url.Substring(end - 5, 5).Equals(".webp", StringComparison.OrdinalIgnoreCase)) return true;
-			return false;
+			return pkg.card_image_url ?? string.Empty;
 		}
 	}
 }
