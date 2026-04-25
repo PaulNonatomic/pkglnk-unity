@@ -43,9 +43,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly Label[] _topicLabels = new Label[MaxTopics];
 		private readonly VisualElement _platformIcon;
 		private readonly Label _repoLabel;
-		private readonly Label _updatedLabel;
 		private readonly Button _installButton;
+		private readonly VisualElement _installButtonLabel;
 		private readonly VisualElement _installButtonIcon;
+		private readonly Label _installButtonText;
+		private readonly Label _installCountLabel;
 		private readonly Button _bookmarkButton;
 		private readonly VisualElement _bookmarkIcon;
 
@@ -240,16 +242,17 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_repoLabel.AddToClassList("repo-label");
 			footer.Add(_repoLabel);
 
-			_updatedLabel = new Label();
-			_updatedLabel.AddToClassList("updated-label");
-			_updatedLabel.text = "0 installs";
-			footer.Add(_updatedLabel);
-
 			_installButton = new Button(() => _onInstallClicked?.Invoke(this));
 			_installButton.text = string.Empty;
 			_installButton.tooltip = "Install";
 			_installButton.AddToClassList("install-button");
 			footer.Add(_installButton);
+
+			// Left chamber: icon + "Install" label
+			_installButtonLabel = new VisualElement();
+			_installButtonLabel.AddToClassList("install-button-label");
+			_installButtonLabel.pickingMode = PickingMode.Ignore;
+			_installButton.Add(_installButtonLabel);
 
 			_installButtonIcon = new VisualElement();
 			_installButtonIcon.AddToClassList("install-button-icon");
@@ -260,7 +263,18 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			{
 				_installButtonIcon.style.backgroundImage = new StyleBackground(downloadTex);
 			}
-			_installButton.Add(_installButtonIcon);
+			_installButtonLabel.Add(_installButtonIcon);
+
+			_installButtonText = new Label("Install");
+			_installButtonText.AddToClassList("install-button-text");
+			_installButtonText.pickingMode = PickingMode.Ignore;
+			_installButtonLabel.Add(_installButtonText);
+
+			// Right chamber: install count
+			_installCountLabel = new Label("0");
+			_installCountLabel.AddToClassList("install-button-count");
+			_installCountLabel.pickingMode = PickingMode.Ignore;
+			_installButton.Add(_installCountLabel);
 		}
 
 		/// <summary>
@@ -443,9 +457,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (installCount != _boundInstallCount)
 			{
 				_boundInstallCount = installCount;
-				_updatedLabel.text = installCount > 0
-					? $"{FormatUtils.FormatCount(installCount)} installs"
-					: "0 installs";
+				_installCountLabel.text = installCount > 0
+					? FormatUtils.FormatCount(installCount)
+					: "0";
 			}
 
 			// Install state — skip redundant class/style changes
@@ -479,9 +493,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		public void UpdateInstallCount(int installCount)
 		{
-			_updatedLabel.text = installCount > 0
-				? $"{FormatUtils.FormatCount(installCount)} installs"
-				: "0 installs";
+			_installCountLabel.text = installCount > 0
+				? FormatUtils.FormatCount(installCount)
+				: "0";
 		}
 
 		public void UpdateBookmarkState(bool isBookmarked)
@@ -502,10 +516,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			if (installing)
 			{
-				_installButton.text = "Installing...";
+				_installButtonText.text = "Installing...";
 				_installButton.SetEnabled(false);
 				_installButton.RemoveFromClassList("installed-button");
 				_installButtonIcon.style.display = DisplayStyle.None;
+				_installCountLabel.style.display = DisplayStyle.None;
 			}
 			else
 			{
@@ -521,16 +536,19 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			switch (phase)
 			{
 				case InstallPhase.Resolving:
-					_installButton.text = "Resolving...";
+					_installButtonText.text = "Resolving...";
 					_installButtonIcon.style.display = DisplayStyle.None;
+					_installCountLabel.style.display = DisplayStyle.None;
 					break;
 				case InstallPhase.Downloading:
-					_installButton.text = "Downloading...";
+					_installButtonText.text = "Downloading...";
 					_installButtonIcon.style.display = DisplayStyle.None;
+					_installCountLabel.style.display = DisplayStyle.None;
 					break;
 				case InstallPhase.Importing:
-					_installButton.text = "Importing...";
+					_installButtonText.text = "Importing...";
 					_installButtonIcon.style.display = DisplayStyle.None;
+					_installCountLabel.style.display = DisplayStyle.None;
 					break;
 				case InstallPhase.Complete:
 					_isInstalled = true;
@@ -552,21 +570,23 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			if (_isInstalled)
 			{
-				_installButton.text = string.Empty;
+				_installButtonText.text = "Installed";
 				_installButton.tooltip = "Installed";
 				_installButton.SetEnabled(false);
 				_installButton.AddToClassList("installed-button");
 				_installButtonIcon.style.backgroundImage = new StyleBackground(TabIcons.Checkmark);
 				_installButtonIcon.style.display = DisplayStyle.Flex;
+				_installCountLabel.style.display = DisplayStyle.None;
 			}
 			else
 			{
-				_installButton.text = string.Empty;
+				_installButtonText.text = "Install";
 				_installButton.tooltip = "Install";
 				_installButton.SetEnabled(true);
 				_installButton.RemoveFromClassList("installed-button");
 				_installButtonIcon.style.backgroundImage = new StyleBackground(TabIcons.Download);
 				_installButtonIcon.style.display = DisplayStyle.Flex;
+				_installCountLabel.style.display = DisplayStyle.Flex;
 			}
 		}
 
