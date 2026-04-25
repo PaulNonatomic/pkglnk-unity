@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] - 2026-04-25
+
+### Changed
+- Card install button restyled as a two-chamber pill matching pkglnk.dev directory cards: violet "Install" chamber with download icon + neutral chamber showing the install count
+- Install count is now part of the install button click target instead of a separate footer label
+- Removed the standalone "N installs" footer label (count moved into the button)
+- Installed cards collapse the button to a single-chamber success-green "Installed" pill
+
 ## [0.9.0] - 2026-04-25
 
 ### Changed

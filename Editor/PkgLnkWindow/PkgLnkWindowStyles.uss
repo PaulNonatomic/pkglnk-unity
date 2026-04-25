@@ -550,66 +550,97 @@
     flex-shrink: 1;
 }
 
-.updated-label {
-    font-size: 10px;
-    color: var(--pkglnk-ink-3);
-    opacity: 0.6;
-    white-space: nowrap;
-    flex-shrink: 0;
-    margin-left: 6px;
-}
-
-/* Install button (compact, in footer) */
+/* Install button — v-split: violet "Install" chamber + neutral count chamber */
 .install-button {
-    height: 20px;
-    padding: 0 10px;
-    border-radius: 6px;
-    font-size: 10px;
-    background-color: var(--pkglnk-accent);
-    color: #ffffff;
-    border-width: 0;
-    -unity-text-align: middle-center;
+    flex-direction: row;
+    height: 22px;
+    padding: 0;
     margin-left: 8px;
+    border-radius: 6px;
+    background-color: var(--pkglnk-bg-2);
+    border-width: 1px;
+    border-color: var(--pkglnk-line);
     flex-shrink: 0;
-    justify-content: center;
+    overflow: hidden;
 }
 
 .install-button:hover {
-    background-color: var(--pkglnk-accent-dim);
+    border-color: rgba(192, 132, 252, 0.5);
+}
+
+.install-button:hover .install-button-label {
+    background-color: var(--pkglnk-accent-hi);
 }
 
 .install-button:disabled {
     background-color: rgba(255, 255, 255, 0.03);
-    color: rgba(166, 175, 184, 0.4);
-    border-width: 1px;
     border-color: rgba(255, 255, 255, 0.08);
 }
 
+.install-button-label {
+    flex-direction: row;
+    align-items: center;
+    padding: 0 9px 0 8px;
+    background-color: var(--pkglnk-accent);
+    border-right-width: 1px;
+    border-right-color: var(--pkglnk-accent-dim);
+}
+
 .install-button-icon {
-    width: 14px;
-    height: 14px;
+    width: 11px;
+    height: 11px;
     flex-shrink: 0;
-    align-self: center;
+    margin-right: 5px;
     -unity-background-scale-mode: scale-to-fit;
     -unity-background-image-tint-color: #ffffff;
 }
 
+.install-button-text {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: #ffffff;
+}
+
+.install-button-count {
+    padding: 0 9px;
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--pkglnk-ink-1);
+    -unity-text-align: middle-center;
+    align-self: center;
+}
+
+/* Installed state — single chamber, success-coloured */
 .installed-button {
-    background-color: rgba(34, 197, 94, 0.15);
-    color: var(--pkglnk-success);
-    border-width: 1px;
+    background-color: rgba(34, 197, 94, 0.12);
     border-color: rgba(34, 197, 94, 0.3);
 }
 
+.installed-button:hover {
+    border-color: rgba(34, 197, 94, 0.45);
+}
+
 .installed-button:disabled {
-    background-color: rgba(34, 197, 94, 0.15);
-    color: var(--pkglnk-success);
-    border-width: 1px;
+    background-color: rgba(34, 197, 94, 0.12);
     border-color: rgba(34, 197, 94, 0.3);
+}
+
+.installed-button .install-button-label {
+    background-color: rgba(0, 0, 0, 0);
+    border-right-width: 0;
+    padding: 0 10px;
+}
+
+.installed-button:hover .install-button-label {
+    background-color: rgba(0, 0, 0, 0);
 }
 
 .installed-button .install-button-icon {
     -unity-background-image-tint-color: var(--pkglnk-success);
+}
+
+.installed-button .install-button-text {
+    color: var(--pkglnk-success);
 }
 
 /* Load more button */
