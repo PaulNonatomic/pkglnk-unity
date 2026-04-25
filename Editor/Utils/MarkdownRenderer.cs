@@ -674,7 +674,7 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			text = Regex.Replace(text, @"(?<!\w)_([^_]+)_(?!\w)", "<i>$1</i>");
 
 			// Links: [text](url) → colored text
-			text = Regex.Replace(text, @"\[([^\]]+)\]\([^)]+\)", "<color=#10b981>$1</color>");
+			text = Regex.Replace(text, @"\[([^\]]+)\]\([^)]+\)", "<color=#c084fc>$1</color>");
 
 			return text;
 		}

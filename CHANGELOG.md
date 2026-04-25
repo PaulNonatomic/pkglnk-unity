@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-04-25
+
+### Changed
+- Theming overhauled to match the latest pkglnk.dev visual identity: neutral dark surfaces with violet accent
+- Stylesheet refactored to use USS custom properties (`--pkglnk-bg`, `--pkglnk-accent`, etc.) for single-source palette tuning
+- Card hover state now reads as a violet border accent instead of muddy white
+- OAuth callback HTML and markdown link colour brought on-palette
+
+### Removed
+- Light (mint) and Grey theme variants — package is now single-theme to mirror pkglnk.dev
+- Theme toggle button removed from header bar
+- `PkgLnkWindowStylesDark.uss`, `PkgLnkWindowStylesLight.uss`, `PkgLnkWindowStylesGrey.uss` (consolidated into the base stylesheet)
+- Unused brand assets: `pkglnk-box-green/orange/trans.png`, `toggle-icon-green/white/grey.png`
+
+### Fixed
+- EditMode tests failing to compile due to missing `InternalsVisibleTo` declaration on the editor assembly
+
 ## [0.8.5] - 2026-04-08
 
 ### Fixed

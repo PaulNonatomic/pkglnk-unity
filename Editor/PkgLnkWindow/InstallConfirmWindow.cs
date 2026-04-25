@@ -108,7 +108,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var logoIcon = new VisualElement();
 			logoIcon.AddToClassList("confirm-logo");
 			var iconTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(
-				"Packages/com.nonatomic.pkglnk/Editor/Icons/pkglnk-box-green.png");
+				"Packages/com.nonatomic.pkglnk/Editor/Icons/pkglnk-box-white.png");
 			if (iconTexture != null)
 			{
 				logoIcon.style.backgroundImage = new StyleBackground(iconTexture);
