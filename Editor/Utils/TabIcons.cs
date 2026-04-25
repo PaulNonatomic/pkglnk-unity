@@ -14,19 +14,15 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 		private static Texture2D _grid;
 		private static Texture2D _sun;
 		private static Texture2D _moon;
-		private static Texture2D _download;
 		private static Texture2D _github;
 		private static Texture2D _gitlab;
 		private static Texture2D _bitbucket;
-		private static Texture2D _checkmark;
 
 		public static Texture2D Compass => _compass ??= Generate(CompassBitmap);
 		public static Texture2D Folder => _folder ??= Generate(FolderBitmap);
 		public static Texture2D Grid => _grid ??= Generate(GridBitmap);
 		public static Texture2D Sun => _sun ??= Generate(SunBitmap);
 		public static Texture2D Moon => _moon ??= Generate(MoonBitmap);
-		public static Texture2D Download => _download ??= Generate(DownloadBitmap);
-		public static Texture2D Checkmark => _checkmark ??= Generate(CheckmarkBitmap);
 		public static Texture2D GitHub => _github ??= LoadAsset("source-icon-github.png");
 		public static Texture2D GitLab => _gitlab ??= LoadAsset("source-icon-gitlab.png");
 		public static Texture2D Bitbucket => _bitbucket ??= Generate(BitbucketBitmap);
@@ -133,44 +129,6 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			"..##......#...",
 			"...##....##...",
 			"....######....",
-			"..............",
-		};
-
-		// Download arrow (Feather download icon) — matches pkglnk.dev install button
-		private static readonly string[] DownloadBitmap =
-		{
-			"......##......",
-			"......##......",
-			"......##......",
-			"......##......",
-			"......##......",
-			"..#...##...#..",
-			"...#..##..#...",
-			"....######....",
-			"..............",
-			"..............",
-			".##........##.",
-			".#..........#.",
-			".#..........#.",
-			"..############",
-		};
-
-		// Checkmark (installed indicator)
-		private static readonly string[] CheckmarkBitmap =
-		{
-			"..............",
-			"..............",
-			"..............",
-			"............#.",
-			"...........#..",
-			"..........#...",
-			".........#....",
-			".#......#.....",
-			"..#....#......",
-			"...#..#.......",
-			"....##........",
-			"..............",
-			"..............",
 			"..............",
 		};
 

@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.2] - 2026-04-25
+
+### Changed
+- Card install/installed icons replaced with crisp Lucide-style download arrow and checkmark, matching pkglnk.dev's InstallButton SVG
+- Icons now sourced from PNGs rendered from canonical SVGs at 128×128, instead of hand-drawn 14×14 ASCII pixel bitmaps
+
+### Removed
+- `TabIcons.Download` and `TabIcons.Checkmark` procedural bitmap textures (replaced by `Editor/Icons/download-icon.png` and `check-icon.png`)
+
 ## [0.9.1] - 2026-04-25
 
 ### Changed

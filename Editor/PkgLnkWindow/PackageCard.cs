@@ -53,6 +53,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private static Texture2D _bookmarkOutlineTex;
 		private static Texture2D _bookmarkFilledTex;
+		private static Texture2D _downloadTex;
+		private static Texture2D _checkTex;
 
 		private string _boundImageUrl;
 		private string _boundAvatarOwner;
@@ -254,14 +256,23 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_installButtonLabel.pickingMode = PickingMode.Ignore;
 			_installButton.Add(_installButtonLabel);
 
+			if (_downloadTex == null)
+			{
+				_downloadTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+					"Packages/com.nonatomic.pkglnk/Editor/Icons/download-icon.png");
+			}
+			if (_checkTex == null)
+			{
+				_checkTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+					"Packages/com.nonatomic.pkglnk/Editor/Icons/check-icon.png");
+			}
+
 			_installButtonIcon = new VisualElement();
 			_installButtonIcon.AddToClassList("install-button-icon");
 			_installButtonIcon.pickingMode = PickingMode.Ignore;
-			var downloadTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
-				"Packages/com.nonatomic.pkglnk/Editor/Icons/download-icon.png");
-			if (downloadTex != null)
+			if (_downloadTex != null)
 			{
-				_installButtonIcon.style.backgroundImage = new StyleBackground(downloadTex);
+				_installButtonIcon.style.backgroundImage = new StyleBackground(_downloadTex);
 			}
 			_installButtonLabel.Add(_installButtonIcon);
 
@@ -574,7 +585,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_installButton.tooltip = "Installed";
 				_installButton.SetEnabled(false);
 				_installButton.AddToClassList("installed-button");
-				_installButtonIcon.style.backgroundImage = new StyleBackground(TabIcons.Checkmark);
+				if (_checkTex != null)
+				{
+					_installButtonIcon.style.backgroundImage = new StyleBackground(_checkTex);
+				}
 				_installButtonIcon.style.display = DisplayStyle.Flex;
 				_installCountLabel.style.display = DisplayStyle.None;
 			}
@@ -584,7 +598,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_installButton.tooltip = "Install";
 				_installButton.SetEnabled(true);
 				_installButton.RemoveFromClassList("installed-button");
-				_installButtonIcon.style.backgroundImage = new StyleBackground(TabIcons.Download);
+				if (_downloadTex != null)
+				{
+					_installButtonIcon.style.backgroundImage = new StyleBackground(_downloadTex);
+				}
 				_installButtonIcon.style.display = DisplayStyle.Flex;
 				_installCountLabel.style.display = DisplayStyle.Flex;
 			}
