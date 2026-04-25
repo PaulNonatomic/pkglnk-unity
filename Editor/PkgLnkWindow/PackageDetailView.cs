@@ -95,7 +95,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_placeholderIcon = new VisualElement();
 			_placeholderIcon.AddToClassList("card-image-placeholder");
 			var placeholderTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(
-				"Packages/com.nonatomic.pkglnk/Editor/Icons/pkglnk-box-green.png");
+				"Packages/com.nonatomic.pkglnk/Editor/Icons/pkglnk-box-white.png");
 			if (placeholderTexture != null)
 			{
 				_placeholderIcon.style.backgroundImage = new StyleBackground(placeholderTexture);

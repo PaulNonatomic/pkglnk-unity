@@ -249,19 +249,19 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		private static string BuildResponseHtml(bool success, string message)
 		{
-			var color = success ? "#10b981" : "#f87171";
+			var color = success ? "#c084fc" : "#f87171";
 			var title = success ? "Connected!" : "Error";
 			return $@"<!DOCTYPE html>
 <html>
 <head><title>PkgLnk - Unity Editor</title>
 <style>
-body {{ font-family: sans-serif; background: #022c22; color: #ecfdf5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }}
-.card {{ background: #064e3b; border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 32px; max-width: 400px; text-align: center; }}
+body {{ font-family: sans-serif; background: #1e1e1e; color: #e8ecef; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }}
+.card {{ background: #252525; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 32px; max-width: 400px; text-align: center; }}
 h1 {{ color: {color}; }}
-p {{ color: #a7f3d0; }}
+p {{ color: #a6afb8; }}
 </style>
 </head>
-<body><div class='card'><h1>{title}</h1><p>{message}</p><p style='color:#6ee7b7;font-size:13px'>You can close this tab and return to Unity.</p></div></body>
+<body><div class='card'><h1>{title}</h1><p>{message}</p><p style='color:#888f98;font-size:13px'>You can close this tab and return to Unity.</p></div></body>
 </html>";
 		}
 
