@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.2] - 2026-04-28
+
+### Fixed
+- NuGet handoff now invokes `NugetForUnity.NugetPackageInstaller.InstallIdentifier(INugetPackageIdentifier, bool, bool, bool)` directly, rather than searching for an "install from local file" method that doesn't exist in NuGetForUnity v4. Constructs a `NugetPackageIdentifier(id, version)` via reflection and hands it to NFU, which then resolves the install through its own configured sources.
+- `Library/PkglnkCache/` is now the .nupkg download location instead of `Assets/Packages/Pkglnk/` — the cache lives in Unity's per-project Library folder where it's git-ignored and excluded from the asset pipeline. The pre-download is still useful (it's where pkglnk's analytics events come from) but it no longer pollutes the project's Assets tree.
+
+### Notes
+- NuGetForUnity does its own redundant fetch from nuget.org when we hand it the identifier. The pkglnk pre-download captures the install event regardless. v2 (pkglnk's own .nupkg unpacker) collapses both into a single fetch.
+
+### Added
+- `Tools / PkgLnk / Diagnostics / Probe NuGetForUnity` menu item (added in 0.10.1 publishing window — listed here for completeness). Prints loaded NuGetForUnity assemblies, candidate types, and public-static methods to the Console; used to identify the API shape the installer reflects against.
+
 ## [0.10.1] - 2026-04-28
 
 ### Fixed

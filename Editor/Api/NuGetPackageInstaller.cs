@@ -34,7 +34,12 @@ namespace Nonatomic.PkgLnk.Editor.Api
 	public static class NuGetPackageInstaller
 	{
 		private const string PkglnkAllowedHost = "pkglnk.dev";
-		private const string DownloadDir = "Assets/Packages/Pkglnk";
+		// Library/ is Unity's per-project cache directory — excluded from
+		// version control + asset pipeline, so the .nupkg never becomes a
+		// tracked project asset. The download is purely for analytics
+		// (bytes flowing through pkglnk) + as a fallback if NuGetForUnity
+		// reflection fails; NFU's own install does its own fetch.
+		private const string DownloadDir = "Library/PkglnkCache";
 		private const string UserAgent = "pkglnk-unity/0.1 (+https://pkglnk.dev)";
 
 		/// <summary>
@@ -224,13 +229,18 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		}
 
 		/// <summary>
-		/// Tries to invoke NuGetForUnity's install API via reflection.
-		/// We don't take a hard reference — NuGetForUnity is an optional
-		/// dependency, and its public API has shifted across major versions
-		/// (v3 → v4). On failure we leave the .nupkg in place at
-		/// Assets/Packages/Pkglnk/ so the user can install it manually
-		/// (drag into the NuGet Package Manager window) and surface a
-		/// descriptive error.
+		/// Hands off to NuGetForUnity's <c>NugetPackageInstaller.InstallIdentifier</c>
+		/// API via reflection — found via the diagnostic probe. NFU takes a
+		/// package identifier (not a file path), so it does its own fetch
+		/// from whatever sources are configured (typically nuget.org). Our
+		/// pre-download through pkglnk's flat container has already
+		/// produced the analytics row; NFU's redundant download is the
+		/// price we pay until v2 ships pkglnk's own .nupkg unpacker.
+		///
+		/// We don't take a hard reference because NuGetForUnity is an
+		/// optional dependency. If the assembly is missing, or the API
+		/// has drifted, the .nupkg is still on disk at
+		/// Library/PkglnkCache/ for manual fallback.
 		/// </summary>
 		private static void HandoffToNuGetForUnity(
 			string packageId,
@@ -246,17 +256,14 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			{
 				onComplete?.Invoke(
 					NuGetInstallOutcome.NuGetForUnityNotFound,
-					$"NuGetForUnity not detected. The .nupkg has been saved to {nupkgPath} — " +
-					"install NuGetForUnity (https://github.com/GlitchEnzo/NuGetForUnity) and drag the file in.");
+					"NuGetForUnity not detected. Install it from " +
+					"https://github.com/GlitchEnzo/NuGetForUnity to enable one-click installs.");
 				return;
 			}
 
-			// Try the install — this layer is best-effort. If the API has
-			// drifted from what we expect, surface the error and leave the
-			// .nupkg on disk for manual handling.
 			try
 			{
-				var invoked = TryInvokeInstallByLocalFile(nfuAssembly, nupkgPath, packageId, version);
+				var invoked = TryInvokeInstallIdentifier(nfuAssembly, packageId, version, out var error);
 				if (invoked)
 				{
 					AssetDatabase.Refresh();
@@ -267,94 +274,114 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 				onComplete?.Invoke(
 					NuGetInstallOutcome.HandoffFailed,
-					$"NuGetForUnity is installed but no compatible install API was found. " +
-					$"The .nupkg is at {nupkgPath} — please install it manually via the NuGet Package Manager window.");
+					error ??
+					"NuGetForUnity is installed but the InstallIdentifier API couldn't be invoked. " +
+					"Run Tools / PkgLnk / Diagnostics / Probe NuGetForUnity and report the output.");
 			}
 			catch (Exception ex)
 			{
-				Debug.LogWarning($"[PkgLnk] NuGetForUnity handoff threw: {ex.GetType().Name}: {ex.Message}");
+				Debug.LogWarning($"[PkgLnk] NuGetForUnity handoff threw: {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
 				onComplete?.Invoke(
 					NuGetInstallOutcome.HandoffFailed,
-					$"NuGetForUnity install threw an error: {ex.Message}. " +
-					$"The .nupkg is at {nupkgPath} for manual install.");
+					$"NuGetForUnity install threw: {ex.Message}");
 			}
 		}
 
 		private static Assembly FindNuGetForUnityAssembly()
 		{
-			// NuGetForUnity's editor assembly is typically named
-			// "NugetForUnity" or "NugetForUnity.Editor" depending on
-			// version. Scan loaded assemblies for either.
+			// The editor assembly is named "NugetForUnity" (lowercase 'g'
+			// after Nu). The PluginAPI sub-assembly exists too but doesn't
+			// contain the installer entry point.
 			return AppDomain.CurrentDomain
 				.GetAssemblies()
-				.FirstOrDefault(a =>
-				{
-					var name = a.GetName().Name;
-					return name.Equals("NugetForUnity", StringComparison.OrdinalIgnoreCase) ||
-					       name.Equals("NugetForUnity.Editor", StringComparison.OrdinalIgnoreCase);
-				});
+				.FirstOrDefault(a => a.GetName().Name.Equals("NugetForUnity", StringComparison.OrdinalIgnoreCase));
 		}
 
 		/// <summary>
-		/// Attempts to find and invoke a public static "install from local
-		/// file path" method in NuGetForUnity. Returns true if a method was
-		/// found and invoked without throwing. The exact method varies by
-		/// version, so we try a couple of known shapes.
+		/// Constructs a <c>NugetPackageIdentifier(id, version)</c> and
+		/// invokes <c>NugetPackageInstaller.InstallIdentifier(identifier,
+		/// refreshAssets:true, isSlimRestoreInstall:false,
+		/// allowUpdateForExplicitlyInstalled:false)</c>. Both type names +
+		/// the method signature were captured from the v0.10.1 diagnostic
+		/// probe against NuGetForUnity v4.5.0. If a future NFU version
+		/// breaks this, the probe will surface the new shape.
 		/// </summary>
-		private static bool TryInvokeInstallByLocalFile(
+		private static bool TryInvokeInstallIdentifier(
 			Assembly nfu,
-			string nupkgPath,
 			string packageId,
-			string version)
+			string version,
+			out string error)
 		{
-			// Candidate type names across NuGetForUnity versions. Reflection
-			// over a small known set is more predictable than walking
-			// every type in the assembly.
-			var candidateTypes = new[]
+			error = null;
+
+			var identifierType = nfu.GetType("NugetForUnity.Models.NugetPackageIdentifier",
+				throwOnError: false, ignoreCase: false);
+			if (identifierType == null)
 			{
-				"NugetForUnity.NugetPackageInstaller",
-				"NugetForUnity.PackageInstaller",
-				"NugetForUnity.NugetHelper"
-			};
-
-			foreach (var typeName in candidateTypes)
-			{
-				var type = nfu.GetType(typeName, throwOnError: false, ignoreCase: false);
-				if (type == null) continue;
-
-				// Try methods that take a single string (file path).
-				foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Static))
-				{
-					if (!IsLikelyInstallFromFileMethod(method)) continue;
-
-#if PKGLNK_DEBUG
-					Debug.Log($"[PkgLnk] Trying NuGetForUnity install method: {type.FullName}.{method.Name}");
-#endif
-
-					method.Invoke(null, new object[] { nupkgPath });
-					return true;
-				}
+				error = "NugetForUnity.Models.NugetPackageIdentifier type not found in NuGetForUnity assembly.";
+				return false;
 			}
 
-			return false;
-		}
+			var identifierInterface = nfu.GetType("NugetForUnity.Models.INugetPackageIdentifier",
+				throwOnError: false, ignoreCase: false);
+			if (identifierInterface == null)
+			{
+				error = "NugetForUnity.Models.INugetPackageIdentifier interface not found.";
+				return false;
+			}
 
-		private static bool IsLikelyInstallFromFileMethod(MethodInfo method)
-		{
-			var name = method.Name.ToLowerInvariant();
-			if (!name.Contains("install")) return false;
+			// NugetPackageIdentifier(string id, string version) is the v4
+			// constructor. If a future version drops it we'll need to
+			// inspect alternatives via the probe.
+			var ctor = identifierType.GetConstructor(new[] { typeof(string), typeof(string) });
+			if (ctor == null)
+			{
+				error = "NugetPackageIdentifier(string, string) constructor not found.";
+				return false;
+			}
 
-			var ps = method.GetParameters();
-			if (ps.Length != 1) return false;
-			if (ps[0].ParameterType != typeof(string)) return false;
+			var identifier = ctor.Invoke(new object[] { packageId, version });
 
-			// Heuristic: parameter name hints "path" / "file" / "nupkg".
-			// If the param name is something else (e.g. "id"), skip — that
-			// method probably wants a package identifier, not a local file.
-			var paramName = ps[0].Name?.ToLowerInvariant() ?? string.Empty;
-			return paramName.Contains("path") ||
-			       paramName.Contains("file") ||
-			       paramName.Contains("nupkg");
+			var installerType = nfu.GetType("NugetForUnity.NugetPackageInstaller",
+				throwOnError: false, ignoreCase: false);
+			if (installerType == null)
+			{
+				error = "NugetForUnity.NugetPackageInstaller type not found.";
+				return false;
+			}
+
+			var installMethod = installerType.GetMethod(
+				"InstallIdentifier",
+				BindingFlags.Public | BindingFlags.Static,
+				binder: null,
+				types: new[] { identifierInterface, typeof(bool), typeof(bool), typeof(bool) },
+				modifiers: null);
+
+			if (installMethod == null)
+			{
+				error = "NugetPackageInstaller.InstallIdentifier(INugetPackageIdentifier, bool, bool, bool) method not found.";
+				return false;
+			}
+
+#if PKGLNK_DEBUG
+			Debug.Log($"[PkgLnk] Invoking {installerType.FullName}.InstallIdentifier({packageId}, {version})");
+#endif
+
+			// refreshAssets:true so NFU triggers AssetDatabase.Refresh() itself.
+			// isSlimRestoreInstall:false → full install (deps resolved).
+			// allowUpdateForExplicitlyInstalled:false → don't bump pinned packages.
+			var result = installMethod.Invoke(null, new object[] { identifier, true, false, false });
+
+			// Method returns bool; treat false as a soft failure (NFU
+			// itself decided not to proceed) but don't throw.
+			if (result is bool ok && !ok)
+			{
+				error = "NuGetForUnity declined to install (InstallIdentifier returned false). " +
+				        "Check the Console for NuGetForUnity logs.";
+				return false;
+			}
+
+			return true;
 		}
 
 		private static string SanitiseFileName(string name)
