@@ -32,6 +32,11 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			"https://pkglnk.dev/track/",
 			"https://www.pkglnk.dev/track/"
 		};
+		private static readonly string[] AllowedNuGetDownloadPrefixes =
+		{
+			"https://pkglnk.dev/nuget/flatcontainer/",
+			"https://www.pkglnk.dev/nuget/flatcontainer/"
+		};
 
 		private static HttpListener _listener;
 		private static Thread _listenerThread;
@@ -159,6 +164,10 @@ namespace Nonatomic.PkgLnk.Editor.Api
 						HandleInstall(request, response);
 						break;
 
+					case "/install/nuget":
+						HandleNuGetInstall(request, response);
+						break;
+
 					default:
 						SendJson(response, 404, "{\"error\":\"not_found\"}");
 						break;
@@ -237,14 +246,89 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		}
 
 		/// <summary>
+		/// Handles POST /install/nuget. Body shape:
+		///   { "packageId": "...", "version": "...", "downloadUrl": "..." }
+		/// downloadUrl must be on pkglnk's flat container — same security
+		/// rule as the UPM /install endpoint, just a different prefix list.
+		/// </summary>
+		private static void HandleNuGetInstall(HttpListenerRequest request, HttpListenerResponse response)
+		{
+			if (request.HttpMethod != "POST")
+			{
+				SendJson(response, 405, "{\"error\":\"method_not_allowed\"}");
+				return;
+			}
+
+			string body;
+			using (var reader = new StreamReader(request.InputStream, request.ContentEncoding))
+			{
+				body = reader.ReadToEnd();
+			}
+
+			var packageId = ParseStringFromJson(body, "packageId");
+			var version = ParseStringFromJson(body, "version");
+			var downloadUrl = ParseStringFromJson(body, "downloadUrl");
+
+			if (string.IsNullOrEmpty(packageId) || string.IsNullOrEmpty(downloadUrl))
+			{
+				Debug.LogWarning("[PkgLnk] NuGet install request missing packageId or downloadUrl");
+				SendJson(response, 400, "{\"error\":\"missing_fields\"}");
+				return;
+			}
+
+			var allowed = false;
+			foreach (var prefix in AllowedNuGetDownloadPrefixes)
+			{
+				if (downloadUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+				{
+					allowed = true;
+					break;
+				}
+			}
+
+			if (!allowed)
+			{
+				Debug.LogWarning($"[PkgLnk] NuGet downloadUrl rejected: {downloadUrl}");
+				SendJson(response, 400, "{\"error\":\"invalid_download_url\"}");
+				return;
+			}
+
+			if (_installDispatched)
+			{
+				Debug.LogWarning("[PkgLnk] Rejecting NuGet install — another install already in progress");
+				SendJson(response, 409, "{\"error\":\"install_in_progress\"}");
+				return;
+			}
+
+			_installDispatched = true;
+			EditorApplication.delayCall += () =>
+			{
+				InstallNuGetConfirmWindow.Show(packageId, version ?? string.Empty, downloadUrl);
+				_installDispatched = false;
+			};
+
+			SendJson(response, 200, "{\"status\":\"installing\"}");
+		}
+
+		/// <summary>
 		/// Minimal JSON parser for {"url":"..."} — avoids dependency on JsonUtility
 		/// which requires a serializable class.
 		/// </summary>
 		private static string ParseUrlFromJson(string json)
 		{
-			if (string.IsNullOrEmpty(json)) return null;
+			return ParseStringFromJson(json, "url");
+		}
 
-			var marker = "\"url\"";
+		/// <summary>
+		/// Extracts a string field by name from a flat JSON object. Tolerates
+		/// arbitrary whitespace and field ordering. Returns null if the field
+		/// isn't present or its value isn't a string.
+		/// </summary>
+		private static string ParseStringFromJson(string json, string fieldName)
+		{
+			if (string.IsNullOrEmpty(json) || string.IsNullOrEmpty(fieldName)) return null;
+
+			var marker = "\"" + fieldName + "\"";
 			var idx = json.IndexOf(marker, StringComparison.Ordinal);
 			if (idx < 0) return null;
 
