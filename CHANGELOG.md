@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.4] - 2026-04-28
+
+### Fixed
+- NuGet install-confirm window's success message no longer truncates on long package ids. The result label inherits `white-space: nowrap` from `login-card-title`, which clipped "Microsoft.Bcl.AsyncInterfaces installed successfully" mid-word. Override `whiteSpace` to `Normal` and split the message onto two lines (package id on top, status below).
+
 ## [0.10.3] - 2026-04-28
 
 ### Fixed

@@ -1,6 +1,6 @@
 {
   "name": "com.nonatomic.pkglnk",
-  "version": "0.10.3",
+  "version": "0.10.4",
   "displayName": "PkgLnk",
   "description": "Browse, search, and install Unity packages from the pkglnk.dev directory inside the Unity Editor",
   "unity": "2022.3",

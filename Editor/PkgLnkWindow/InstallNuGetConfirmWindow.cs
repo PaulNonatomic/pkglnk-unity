@@ -185,6 +185,13 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_resultLabel = new Label();
 			_resultLabel.AddToClassList("login-card-title");
+			// login-card-title sets white-space: nowrap, which truncated
+			// "Microsoft.Bcl.AsyncInterfaces installed successfully" to
+			// "Microsoft.Bcl.AsyncInterfaces installed successfull…".
+			// Override to allow wrapping + the explicit \n we use to
+			// split package id from status onto separate lines.
+			_resultLabel.style.whiteSpace = WhiteSpace.Normal;
+			_resultLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
 			_resultSection.Add(_resultLabel);
 
 			_closeButton = new Button(() => Close());
@@ -261,7 +268,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			if (success)
 			{
-				_resultLabel.text = $"{_packageId} installed successfully";
+				// Package ID on top, status on the line below — long ids
+				// like "Microsoft.Bcl.AsyncInterfaces" otherwise overflow
+				// the 420-px modal width.
+				_resultLabel.text = $"{_packageId}\ninstalled successfully";
 				_resultLabel.RemoveFromClassList("row-status-error");
 
 				EditorApplication.delayCall += () =>
