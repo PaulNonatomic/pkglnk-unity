@@ -73,22 +73,102 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				return;
 			}
 
-			// If the URL points at the versions index rather than a
-			// specific .nupkg, we'd need a second round-trip to resolve
-			// the latest version. v1 expects callers (the web modal) to
-			// pass a fully-qualified .nupkg URL — flag this explicitly so
-			// the caller can't accidentally feed us an index.json.
-			if (!downloadUrl.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase))
+			onPhase?.Invoke(InstallPhase.Resolving);
+
+			// Two URL shapes are accepted:
+			//   - …/{id}/{version}/{id}.{version}.nupkg → download directly
+			//   - …/{id}/index.json → fetch versions list, pick latest,
+			//                         then build the .nupkg URL
+			// The web modal sends the index.json shape when no version is
+			// pinned (the common case for v1), so we resolve here rather
+			// than burdening every caller with the version lookup.
+			if (downloadUrl.EndsWith(".nupkg", StringComparison.OrdinalIgnoreCase))
 			{
-				onComplete?.Invoke(
-					NuGetInstallOutcome.DownloadFailed,
-					"downloadUrl must point at a .nupkg file (versions resolution not yet supported)");
+				DownloadNupkg(packageId, version, downloadUrl, onComplete, onPhase);
 				return;
 			}
 
-			onPhase?.Invoke(InstallPhase.Resolving);
+			if (downloadUrl.EndsWith("/index.json", StringComparison.OrdinalIgnoreCase))
+			{
+				ResolveLatestVersionThenDownload(packageId, downloadUrl, onComplete, onPhase);
+				return;
+			}
 
-			DownloadNupkg(packageId, version, downloadUrl, onComplete, onPhase);
+			onComplete?.Invoke(
+				NuGetInstallOutcome.DownloadFailed,
+				$"Unrecognised downloadUrl shape: {downloadUrl}");
+		}
+
+		[Serializable]
+		private class VersionsList
+		{
+			public string[] versions;
+		}
+
+		/// <summary>
+		/// Fetches /flatcontainer/{id}/index.json (versions list per the
+		/// NuGet v3 protocol — ascending semver order, last entry is
+		/// latest), then constructs the .nupkg URL and continues to
+		/// DownloadNupkg. We picked NuGet's "last entry" rule rather than
+		/// doing semver parsing because every package on api.nuget.org
+		/// follows the spec and over-engineering version comparison adds
+		/// no value.
+		/// </summary>
+		private static void ResolveLatestVersionThenDownload(
+			string packageId,
+			string indexUrl,
+			Action<NuGetInstallOutcome, string> onComplete,
+			Action<InstallPhase> onPhase)
+		{
+			var request = UnityWebRequest.Get(indexUrl);
+			request.SetRequestHeader("User-Agent", UserAgent);
+			request.SetRequestHeader("Accept", "application/json");
+
+			var op = request.SendWebRequest();
+			op.completed += _ =>
+			{
+				try
+				{
+					if (request.result != UnityWebRequest.Result.Success)
+					{
+						onComplete?.Invoke(
+							NuGetInstallOutcome.DownloadFailed,
+							$"Versions list failed ({request.responseCode}): {request.error}");
+						return;
+					}
+
+					var json = request.downloadHandler.text;
+					var parsed = JsonUtility.FromJson<VersionsList>(json);
+					var version = parsed?.versions != null && parsed.versions.Length > 0
+						? parsed.versions[parsed.versions.Length - 1]
+						: null;
+
+					if (string.IsNullOrEmpty(version))
+					{
+						onComplete?.Invoke(
+							NuGetInstallOutcome.DownloadFailed,
+							"Could not parse latest version from versions list");
+						return;
+					}
+
+					// Build the .nupkg URL. The flat container path
+					// uses lowercased id and version per protocol.
+					var basePrefix = indexUrl.Substring(0, indexUrl.LastIndexOf('/') + 1);
+					var lowerId = packageId.ToLowerInvariant();
+					var lowerVer = version.ToLowerInvariant();
+					var nupkgUrl = $"{basePrefix}{lowerVer}/{lowerId}.{lowerVer}.nupkg";
+
+#if PKGLNK_DEBUG
+					Debug.Log($"[PkgLnk] Resolved {packageId} latest version: {version} → {nupkgUrl}");
+#endif
+
+					DownloadNupkg(packageId, version, nupkgUrl, onComplete, onPhase);
+				}
+				finally
+				{
+					request.Dispose();
+				}
+			};
 		}
 
 		private static bool IsPkglnkUrl(string url)
