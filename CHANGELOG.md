@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1] - 2026-04-28
+
+### Fixed
+- NuGet installer now resolves the latest version when the web modal sends a `downloadUrl` ending in `/index.json` (versions list) rather than a fully-qualified `.nupkg` URL — fetches the versions list, picks the last entry per NuGet v3's ascending semver order, then continues into the .nupkg download
+
+## [0.10.0] - 2026-04-28
+
+### Added
+- `/install/nuget` localhost endpoint mirroring the existing UPM `/install` route. Body shape: `{ packageId, version?, downloadUrl }`. `downloadUrl` is restricted to `pkglnk.dev/nuget/flatcontainer/*` for security, matching the UPM URL-prefix allowlist
+- `NuGetPackageInstaller` — downloads the `.nupkg` via `UnityWebRequest` from pkglnk's flat container so install events flow through the same analytics pipeline as UPM clones, then hands off to NuGetForUnity via reflection (no hard reference — assembly is optional)
+- `InstallNuGetConfirmWindow` — confirmation popup mirroring `InstallConfirmWindow` for browser-initiated NuGet installs, sharing the same Resolving → Downloading → Importing → Complete phase animation
+
+### Notes
+- NuGetForUnity API binding is best-effort reflection. If the assembly isn't installed, or the API has drifted from the heuristic, the `.nupkg` is left at `Assets/Packages/Pkglnk/{file}.nupkg` with a clear error message pointing the user at the manual fallback (drag into NuGet Package Manager window)
+
 ## [0.9.2] - 2026-04-25
 
 ### Changed
