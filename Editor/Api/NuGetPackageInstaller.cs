@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -264,19 +265,45 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			try
 			{
 				var invoked = TryInvokeInstallIdentifier(nfuAssembly, packageId, version, out var error);
-				if (invoked)
+				if (!invoked)
 				{
-					AssetDatabase.Refresh();
-					onPhase?.Invoke(InstallPhase.Complete);
-					onComplete?.Invoke(NuGetInstallOutcome.Success, null);
+					onComplete?.Invoke(
+						NuGetInstallOutcome.HandoffFailed,
+						error ??
+						"NuGetForUnity is installed but the InstallIdentifier API couldn't be invoked. " +
+						"Run Tools / PkgLnk / Diagnostics / Probe NuGetForUnity and report the output.");
 					return;
 				}
 
-				onComplete?.Invoke(
-					NuGetInstallOutcome.HandoffFailed,
-					error ??
-					"NuGetForUnity is installed but the InstallIdentifier API couldn't be invoked. " +
-					"Run Tools / PkgLnk / Diagnostics / Probe NuGetForUnity and report the output.");
+				// Trust but verify. NuGetForUnity's InstallIdentifier
+				// returning true doesn't always mean it actually placed
+				// the package on disk — it can no-op silently when
+				// sources aren't configured, when the package id +
+				// version doesn't resolve in any source, or when NFU
+				// thinks it's already installed (false positive on
+				// stale state). Confirm via InstalledPackagesManager.
+				if (!IsInstalledAccordingToNFU(nfuAssembly, packageId))
+				{
+					onComplete?.Invoke(
+						NuGetInstallOutcome.HandoffFailed,
+						$"NuGetForUnity reported install success but {packageId} isn't in its " +
+						"installed-packages list. Check the Unity Console for NuGetForUnity logs " +
+						"— typically a missing source or unresolvable version. " +
+						"Verify NuGetForUnity has nuget.org configured under " +
+						"Edit / Project Settings / NuGet / Package Sources.");
+					return;
+				}
+
+				AssetDatabase.Refresh();
+
+				// Ping the installed folder in the Project window so the
+				// user gets visible confirmation of where it landed —
+				// matters because NuGet packages don't appear in Unity's
+				// Package Manager and have no other ambient signal.
+				PingInstalledPackageFolder(packageId);
+
+				onPhase?.Invoke(InstallPhase.Complete);
+				onComplete?.Invoke(NuGetInstallOutcome.Success, null);
 			}
 			catch (Exception ex)
 			{
@@ -285,6 +312,94 @@ namespace Nonatomic.PkgLnk.Editor.Api
 					NuGetInstallOutcome.HandoffFailed,
 					$"NuGetForUnity install threw: {ex.Message}");
 			}
+		}
+
+		/// <summary>
+		/// Locates the just-installed NuGet package folder under
+		/// <c>Assets/Packages/{Id}.{Version}/</c> and pings it in the
+		/// Project window so the user sees where the install landed.
+		/// NFU's default install location is <c>Assets/Packages/</c>;
+		/// users with custom <c>PackageInstallLocation</c> config won't
+		/// get the ping (we silently skip — install still succeeded).
+		/// </summary>
+		private static void PingInstalledPackageFolder(string packageId)
+		{
+			try
+			{
+				const string packagesDir = "Assets/Packages";
+				if (!Directory.Exists(packagesDir)) return;
+
+				// NFU folder names follow the pattern {Id}.{Version}/ —
+				// match by id prefix + dot to avoid sub-string matches
+				// (e.g. "Microsoft.Bcl" matching "Microsoft.Bcl.AsyncInterfaces").
+				var matches = Directory.GetDirectories(packagesDir, $"{packageId}.*");
+				if (matches.Length == 0) return;
+
+				// If multiple versions are present (rare; NFU usually
+				// only keeps one), prefer the newest by mtime so we
+				// ping the freshly-installed one rather than a stale
+				// previous version.
+				var newest = matches
+					.OrderByDescending(p => Directory.GetLastWriteTimeUtc(p))
+					.First();
+
+				// Normalise Windows backslashes — AssetDatabase only
+				// resolves forward-slash paths.
+				var assetPath = newest.Replace('\\', '/');
+
+				var asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(assetPath);
+				if (asset == null) return;
+
+				EditorGUIUtility.PingObject(asset);
+				Selection.activeObject = asset;
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"[PkgLnk] Could not ping installed package folder: {ex.Message}");
+			}
+		}
+
+		/// <summary>
+		/// Asks NuGetForUnity's <c>InstalledPackagesManager.InstalledPackages</c>
+		/// (also captured by the diagnostic probe) whether the package id
+		/// is currently considered installed. Used as a post-install gate
+		/// so a silent no-op from <c>InstallIdentifier</c> is caught and
+		/// surfaced as a real error rather than a false success.
+		/// </summary>
+		private static bool IsInstalledAccordingToNFU(Assembly nfu, string packageId)
+		{
+			try
+			{
+				var managerType = nfu.GetType("NugetForUnity.InstalledPackagesManager",
+					throwOnError: false, ignoreCase: false);
+				if (managerType == null) return false;
+
+				var prop = managerType.GetProperty("InstalledPackages",
+					BindingFlags.Public | BindingFlags.Static);
+				if (prop == null) return false;
+
+				if (prop.GetValue(null) is not IEnumerable packages) return false;
+
+				foreach (var pkg in packages)
+				{
+					if (pkg == null) continue;
+					var idProp = pkg.GetType().GetProperty("Id",
+						BindingFlags.Public | BindingFlags.Instance);
+					if (idProp == null) continue;
+
+					var id = idProp.GetValue(pkg) as string;
+					if (string.Equals(id, packageId, StringComparison.OrdinalIgnoreCase))
+					{
+						return true;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.LogWarning($"[PkgLnk] InstalledPackagesManager probe threw: {ex.Message}");
+			}
+
+			return false;
 		}
 
 		private static Assembly FindNuGetForUnityAssembly()
@@ -372,12 +487,21 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			// allowUpdateForExplicitlyInstalled:false → don't bump pinned packages.
 			var result = installMethod.Invoke(null, new object[] { identifier, true, false, false });
 
-			// Method returns bool; treat false as a soft failure (NFU
-			// itself decided not to proceed) but don't throw.
-			if (result is bool ok && !ok)
+			// Method returns bool. If we got something other than a bool
+			// back (null, wrong-shaped) treat that as a failure — earlier
+			// code accidentally returned true on a null result, which
+			// masked silent no-ops from NFU.
+			if (result is not bool ok)
+			{
+				error = "InstallIdentifier returned a non-bool result. " +
+				        "NuGetForUnity API may have changed — re-run the diagnostic probe.";
+				return false;
+			}
+
+			if (!ok)
 			{
 				error = "NuGetForUnity declined to install (InstallIdentifier returned false). " +
-				        "Check the Console for NuGetForUnity logs.";
+				        "Check the Console for NuGetForUnity logs — typically missing sources or unresolvable version.";
 				return false;
 			}
 

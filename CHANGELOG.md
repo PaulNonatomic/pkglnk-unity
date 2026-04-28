@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.3] - 2026-04-28
+
+### Fixed
+- Post-install verification now queries `NugetForUnity.InstalledPackagesManager.InstalledPackages` to confirm the package actually landed before reporting success. Previously a silent no-op from `InstallIdentifier` (e.g. unresolvable version, missing source) would be reported as success because the bool-cast guard returned true on a null result. Now any handoff that doesn't end with the package in NFU's installed list surfaces as `HandoffFailed` with a hint pointing the user at NFU's source configuration.
+- `InstallIdentifier` non-bool / null return now treated as failure rather than silent success.
+
+### Added
+- After a verified install, the freshly-installed `Assets/Packages/{Id}.{Version}/` folder is pinged in the Project window via `EditorGUIUtility.PingObject`. NuGet packages don't appear in Unity's Package Manager, so this gives the user visible confirmation of where the install landed. Falls back silently on custom NFU install locations.
+
 ## [0.10.2] - 2026-04-28
 
 ### Fixed
