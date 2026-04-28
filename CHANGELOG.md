@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.5] - 2026-04-28
+
+### Fixed
+- UPM `InstallConfirmWindow` result label now wraps and splits the success message onto two lines (slug, then status) — same fix as 0.10.4 applied to the sibling component, since long slugs would hit the same `white-space: nowrap` truncation bug.
+
 ## [0.10.4] - 2026-04-28
 
 ### Fixed

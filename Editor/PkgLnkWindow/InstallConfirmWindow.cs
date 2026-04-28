@@ -186,6 +186,13 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_resultLabel = new Label();
 			_resultLabel.AddToClassList("login-card-title");
+			// login-card-title sets white-space: nowrap, which clips
+			// long slugs like "com.unity.foo.bar.baz installed
+			// successfully" at the modal's 380-px width. Override so
+			// the \n in the success text renders as a real line break
+			// and long error strings wrap rather than truncate.
+			_resultLabel.style.whiteSpace = WhiteSpace.Normal;
+			_resultLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
 			_resultSection.Add(_resultLabel);
 
 			_closeButton = new Button(() => Close());
@@ -265,7 +272,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			if (success)
 			{
-				_resultLabel.text = $"{_slug} installed successfully";
+				// Slug on top, status on the line below — long slugs
+				// otherwise overflow the 380-px modal width.
+				_resultLabel.text = $"{_slug}\ninstalled successfully";
 				_resultLabel.RemoveFromClassList("row-status-error");
 
 				// Auto-close after a brief delay
