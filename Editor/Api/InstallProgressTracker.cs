@@ -20,6 +20,22 @@ namespace Nonatomic.PkgLnk.Editor.Api
 	}
 
 	/// <summary>
+	/// Install-source identifiers that pkglnk.dev validates against.
+	/// Values mirror the server-side enum in /api/v1/install-start;
+	/// adding a new source requires updates on both sides.
+	/// </summary>
+	public static class InstallSource
+	{
+		/// <summary>User clicked Install on pkglnk.dev — the website's
+		/// modal forwarded the request to us via the localhost listener.</summary>
+		public const string PkglnkWeb = "pkglnk-web";
+
+		/// <summary>User clicked install on a card inside pkglnk-unity's
+		/// own editor browser window — direct in-editor flow.</summary>
+		public const string PkglnkUnityWindow = "pkglnk-unity-window";
+	}
+
+	/// <summary>
 	/// Tracks real-time install progress by polling the pkglnk.dev server.
 	/// The server updates phase as git protocol events arrive at the tracking proxy.
 	/// </summary>
@@ -57,10 +73,21 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		/// <summary>
 		/// Notifies the server that an install is starting. Fire-and-forget.
+		///
+		/// <paramref name="source"/> tells the server which surface
+		/// triggered the install — either <see cref="InstallSource.PkglnkWeb"/>
+		/// (the user clicked Install on pkglnk.dev and the request was
+		/// forwarded here via the localhost listener) or
+		/// <see cref="InstallSource.PkglnkUnityWindow"/> (the user
+		/// browsed packages inside pkglnk-unity's editor window).
+		/// Defaults to <see cref="InstallSource.PkglnkUnityWindow"/>.
 		/// </summary>
-		public static void NotifyInstallStart(string slug, string installId)
+		public static void NotifyInstallStart(string slug, string installId, string source = InstallSource.PkglnkUnityWindow)
 		{
-			var body = $"{{\"slug\":\"{slug}\",\"install_id\":\"{installId}\"}}";
+			// Tiny manual JSON encode keeps the dependency footprint
+			// down. Source values are server-side validated against an
+			// enum so we don't need to escape them here.
+			var body = $"{{\"slug\":\"{slug}\",\"install_id\":\"{installId}\",\"source\":\"{source}\"}}";
 			var request = new UnityWebRequest($"{ApiUrl}/install-start", "POST");
 			request.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
 			request.downloadHandler = new DownloadHandlerBuffer();

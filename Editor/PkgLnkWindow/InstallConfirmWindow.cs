@@ -217,8 +217,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_ceilPercent = 28f;
 			StartAnimation();
 
+			// This window is only opened by PkgLnkInstallListener in
+			// response to a /install POST from pkglnk.dev's web modal,
+			// so the install was triggered by the website rather than
+			// by the editor browser. Source = pkglnk-web.
 			var pkg = ParsePackageDataFromUrl(_installUrl);
-			PackageInstaller.Install(pkg, OnInstallComplete, OnInstallPhase);
+			PackageInstaller.Install(pkg, OnInstallComplete, OnInstallPhase, InstallSource.PkglnkWeb);
 		}
 
 		private void OnInstallPhase(InstallPhase phase)

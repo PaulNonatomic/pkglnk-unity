@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.6] - 2026-04-29
+
+### Added
+- Install-source tagging. `PackageInstaller.Install()` now takes an optional `source` argument identifying which UI surface triggered the install:
+  - `InstallSource.PkglnkWeb` — passed by `InstallConfirmWindow` when the install was deep-linked from a click on pkglnk.dev
+  - `InstallSource.PkglnkUnityWindow` — default; used by all in-editor install paths (`PackageBrowserView`, `PackageDetailView`, `CollectionDetailView`, `BatchInstaller`)
+  Source flows through `/api/v1/install-start` (which now accepts and validates a `source` field) onto the resulting install_session row, and from there onto the install analytics row at proxy time. pkglnk.dev's analytics panel now distinguishes website-driven vs editor-driven vs direct UPM-paste installs.
+- `BuildInstallUrl(pkg, installId)` appends `?install=<16-hex>` to the UPM Git URL. The proxy reads that param and attaches the resulting install row to the session by primary key — replaces the brittle daily-salted IP-hash join that was losing most rows. Stripped before forwarding to the upstream Git host so it never reaches GitHub/GitLab/Bitbucket.
+
 ## [0.10.5] - 2026-04-28
 
 ### Fixed

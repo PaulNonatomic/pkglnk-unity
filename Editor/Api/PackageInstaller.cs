@@ -44,15 +44,31 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 		/// <summary>
 		/// Builds the UPM git install URL for a package.
-		/// Format: https://pkglnk.dev/{slug}.git[?path={git_path}][#{git_ref}]
+		/// Format: https://pkglnk.dev/{slug}.git[?path={path}&install={id}][#{ref}]
+		///
+		/// The optional <paramref name="installId"/> is appended as an
+		/// `install` query param so the proxy can attach the resulting
+		/// install analytics row to the session row by primary key.
+		/// The proxy strips it before forwarding to the upstream Git
+		/// host so it never leaks to GitHub/GitLab/Bitbucket.
 		/// </summary>
-		public static string BuildInstallUrl(PackageData pkg)
+		public static string BuildInstallUrl(PackageData pkg, string installId = null)
 		{
 			var sb = new StringBuilder($"https://pkglnk.dev/{pkg.slug}.git");
 
+			var hasQuery = false;
 			if (!string.IsNullOrEmpty(pkg.git_path))
 			{
 				sb.Append($"?path={Uri.EscapeDataString(pkg.git_path)}");
+				hasQuery = true;
+			}
+
+			if (!string.IsNullOrEmpty(installId))
+			{
+				sb.Append(hasQuery ? '&' : '?');
+				sb.Append("install=");
+				sb.Append(Uri.EscapeDataString(installId));
+				hasQuery = true;
 			}
 
 			if (!string.IsNullOrEmpty(pkg.git_ref))
@@ -175,9 +191,20 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		/// Begins installation. <paramref name="onComplete"/> receives (success, errorMessage).
 		/// Optionally pass <paramref name="onProgress"/> to receive real-time phase updates
 		/// from the pkglnk.dev tracking proxy.
+		/// <paramref name="source"/> identifies which UI surface
+		/// triggered the install (default <see cref="InstallSource.PkglnkUnityWindow"/>);
+		/// the localhost listener that handles deep-links from pkglnk.dev
+		/// passes <see cref="InstallSource.PkglnkWeb"/>. Source flows
+		/// through to the server's install_sessions row and onto the
+		/// resulting install analytics row, so per-source breakdowns
+		/// in pkglnk.dev's analytics panel are accurate.
 		/// Only call when <see cref="IsInstalling"/> is false.
 		/// </summary>
-		public static void Install(PackageData pkg, Action<bool, string> onComplete, Action<InstallPhase> onProgress = null)
+		public static void Install(
+			PackageData pkg,
+			Action<bool, string> onComplete,
+			Action<InstallPhase> onProgress = null,
+			string source = InstallSource.PkglnkUnityWindow)
 		{
 			if (IsInstalling)
 			{
@@ -185,18 +212,27 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				return;
 			}
 
-			var url = BuildInstallUrl(pkg);
+			// Generate the install_id up-front so we can append it to
+			// the UPM Git URL as ?install=<id>. The proxy reads that
+			// param to attach the resulting install row to the
+			// install_session by primary key — far more robust than
+			// the legacy IP-hash join.
+			var installId = InstallProgressTracker.GenerateInstallId();
+
+			var url = BuildInstallUrl(pkg, installId);
 			_onComplete = onComplete;
 			_onProgress = onProgress;
 			_pendingRequest = Client.Add(url);
 
 			SessionState.SetString(SessionKeySlug, pkg.slug);
 
-			// Start server-side progress tracking if callback provided
+			// Notify the server of the session regardless of whether the
+			// caller wants live progress updates; the server uses the
+			// session row to stamp `source` onto the resulting install
+			// analytics row, which is independent of polling.
+			InstallProgressTracker.NotifyInstallStart(pkg.slug, installId, source);
 			if (_onProgress != null)
 			{
-				var installId = InstallProgressTracker.GenerateInstallId();
-				InstallProgressTracker.NotifyInstallStart(pkg.slug, installId);
 				InstallProgressTracker.StartTracking(installId, _onProgress);
 			}
 
