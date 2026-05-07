@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.7] - 2026-04-29
+
+### Fixed
+- Card and avatar images randomly disappearing after play-mode toggles, asset imports, or other `Resources.UnloadUnusedAssets()` triggers. Cached textures are now flagged `HideAndDontSave | DontUnloadUnusedAsset` so Unity's GC sweep can't destroy them while `ImageLoader`'s cache still holds references.
+- `ImageLoader` cache now cleared before each assembly reload (`AssemblyReloadEvents.beforeAssemblyReload`) so post-reload lookups don't return stale references to destroyed `UnityEngine.Object` textures.
+- Stale cache entries (texture destroyed despite hideFlags) detected on lookup and dropped so the next request re-fetches instead of silently returning a fake-null reference.
+
+### Changed
+- `ImageLoader` cache bounded to 256 entries with LRU eviction. Evicted textures are explicitly destroyed.
+- Per-card image recheck interval bumped from 60s to 5 minutes, and capped at 3 attempts per card. Previously every card without an image polled `/api/directory` every 60s indefinitely — with ~40 visible imageless cards, that was 40+ requests/min while the window was open. Window now makes at most ~120 requests over 15 minutes for a fresh worst-case session, then the polling stops entirely (which is also why new packages appearing on pkglnk.dev seemed to land in the Editor "instantly" — they were being repolled aggressively).
+
+### Documentation
+- README architecture section corrected: `Editor/Styles/` directory listed there never actually existed (USS lives inside `Editor/PkgLnkWindow/`), and the "dark + light themes" mention is stale since v0.9.0's single-theme consolidation.
+
 ## [0.10.6] - 2026-04-29
 
 ### Added
