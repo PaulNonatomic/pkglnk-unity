@@ -103,10 +103,9 @@ The package is editor-only and lives entirely under `Editor/`:
 ```
 Editor/
 ├── Api/                    # API client, data models, auth, package installer
-├── PkgLnkWindow/           # UI Toolkit views, card grid, filters, detail view
+├── PkgLnkWindow/           # UI Toolkit views, card grid, filters, detail view, USS stylesheet
 ├── Utils/                  # Image loader, date/format utilities
-├── Icons/                  # Package icons (logo, placeholder)
-└── Styles/                 # USS stylesheets (dark + light themes)
+└── Icons/                  # Brand mark, bookmark, source platform, install icons (PNG + source SVG)
 ```
 
 Key implementation details:

@@ -1,17 +1,37 @@
 using System;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Nonatomic.PkgLnk.Editor.Utils
 {
 	/// <summary>
-	/// Async texture loader with in-memory caching for card images and avatars.
+	/// Async texture loader with bounded LRU caching for card images and avatars.
+	///
+	/// Cached textures are flagged HideAndDontSave|DontUnloadUnusedAsset so a
+	/// Resources.UnloadUnusedAssets() sweep (triggered by play-mode toggles,
+	/// asset imports, scene loads, etc.) doesn't destroy them while the
+	/// dictionary still holds references — which previously caused images to
+	/// "disappear" intermittently.
+	///
+	/// Cache is cleared before each assembly reload so post-reload lookups
+	/// don't return stale references to destroyed UnityEngine.Objects.
 	/// </summary>
 	public static class ImageLoader
 	{
+		private const int MaxCacheSize = 256;
+
 		private static readonly Dictionary<string, Texture2D> Cache = new Dictionary<string, Texture2D>();
+		private static readonly LinkedList<string> CacheOrder = new LinkedList<string>();
 		private static readonly Dictionary<string, List<Action<Texture2D>>> Pending = new Dictionary<string, List<Action<Texture2D>>>();
+
+		[InitializeOnLoadMethod]
+		private static void RegisterReloadHandler()
+		{
+			AssemblyReloadEvents.beforeAssemblyReload -= ClearCache;
+			AssemblyReloadEvents.beforeAssemblyReload += ClearCache;
+		}
 
 		/// <summary>
 		/// Loads a texture from a URL. Returns cached texture immediately if available.
@@ -33,8 +53,18 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 
 			if (Cache.TryGetValue(url, out var cached))
 			{
-				onLoaded?.Invoke(cached);
-				return;
+				if (cached != null)
+				{
+					// LRU bump
+					CacheOrder.Remove(url);
+					CacheOrder.AddLast(url);
+					onLoaded?.Invoke(cached);
+					return;
+				}
+
+				// Stale entry — texture was destroyed despite our hideFlags. Drop and re-fetch.
+				Cache.Remove(url);
+				CacheOrder.Remove(url);
 			}
 
 			// If already in flight, queue the callback for when it completes
@@ -122,12 +152,42 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 		{
 			if (texture != null)
 			{
-				Cache[url] = texture;
+				// Prevent Resources.UnloadUnusedAssets() and serialization passes
+				// from destroying our cached textures.
+				texture.hideFlags = HideFlags.HideAndDontSave | HideFlags.DontUnloadUnusedAsset;
+				AddToCache(url, texture);
 			}
 
 			if (!Pending.TryGetValue(url, out var pending)) return;
 			Pending.Remove(url);
 			foreach (var cb in pending) cb?.Invoke(texture);
+		}
+
+		private static void AddToCache(string url, Texture2D texture)
+		{
+			if (Cache.ContainsKey(url))
+			{
+				// Refresh existing entry to most-recently-used.
+				CacheOrder.Remove(url);
+				CacheOrder.AddLast(url);
+				Cache[url] = texture;
+				return;
+			}
+
+			Cache[url] = texture;
+			CacheOrder.AddLast(url);
+
+			while (CacheOrder.Count > MaxCacheSize)
+			{
+				var oldest = CacheOrder.First;
+				if (oldest == null) break;
+				CacheOrder.RemoveFirst();
+				if (Cache.TryGetValue(oldest.Value, out var evicted))
+				{
+					Cache.Remove(oldest.Value);
+					if (evicted != null) UnityEngine.Object.DestroyImmediate(evicted);
+				}
+			}
 		}
 
 		private static bool IsGifUrl(string url)
@@ -140,7 +200,7 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			return end >= 4 && url.Substring(end - 4, 4).Equals(".gif", StringComparison.OrdinalIgnoreCase);
 		}
 
-		/// <summary>Clears the entire image cache.</summary>
+		/// <summary>Clears the entire image cache and destroys every cached texture.</summary>
 		public static void ClearCache()
 		{
 			foreach (var texture in Cache.Values)
@@ -152,6 +212,7 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			}
 
 			Cache.Clear();
+			CacheOrder.Clear();
 		}
 	}
 }

@@ -18,7 +18,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		public PackageData Package { get; private set; }
 
-		private const long ImageRecheckIntervalMs = 60_000;
+		// Recheck imageless cards at a much lower cadence than before (was 60s, now 5min)
+		// and stop after a small number of attempts so a card with no image upstream
+		// doesn't poll the directory endpoint indefinitely.
+		private const long ImageRecheckIntervalMs = 300_000;
+		private const int MaxImageRecheckAttempts = 3;
 
 		private readonly Action<PackageCard> _onClicked;
 		private readonly Action<string> _onTopicClicked;
@@ -67,6 +71,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private bool _isInstalled;
 		private bool _isBookmarked;
 		private bool _isGhost = true;
+		private int _imageRecheckAttempts;
 		private IVisualElementScheduledItem _imageRecheckTask;
 
 		// Position cache — avoids redundant style writes during scroll
@@ -630,11 +635,27 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			if (_onImageRecheck == null) return;
 			if (_imageRecheckTask != null) return;
+			_imageRecheckAttempts = 0;
 			_imageRecheckTask = schedule.Execute(() =>
 			{
-				if (_isGhost || Package == null) return;
-				if (!string.IsNullOrEmpty(Package.card_image_url)) return;
+				if (_isGhost || Package == null)
+				{
+					CancelImageRecheck();
+					return;
+				}
+				if (!string.IsNullOrEmpty(Package.card_image_url))
+				{
+					CancelImageRecheck();
+					return;
+				}
+
+				_imageRecheckAttempts++;
 				_onImageRecheck.Invoke(this);
+
+				if (_imageRecheckAttempts >= MaxImageRecheckAttempts)
+				{
+					CancelImageRecheck();
+				}
 			}).StartingIn(ImageRecheckIntervalMs).Every(ImageRecheckIntervalMs);
 		}
 
