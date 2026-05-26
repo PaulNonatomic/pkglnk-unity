@@ -297,7 +297,31 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private void OnInstallClicked()
 		{
-			if (_currentPackage == null || _isInstalled || PackageInstaller.IsInstalling) return;
+			if (_currentPackage == null) return;
+
+			// Project listings: download to disk via ProjectDownloader instead
+			// of going through UPM.
+			if (_currentPackage.listing_type == "project")
+			{
+				_installButton.text = "Downloading...";
+				_installButton.SetEnabled(false);
+				_errorLabel.style.display = DisplayStyle.None;
+
+				ProjectDownloader.Download(_currentPackage, (success, error, _) =>
+				{
+					_installButton.text = "Download";
+					_installButton.SetEnabled(true);
+					_installButton.RemoveFromClassList("installed-button");
+					if (!success && !string.IsNullOrEmpty(error) && error != "Cancelled.")
+					{
+						_errorLabel.text = error;
+						_errorLabel.style.display = DisplayStyle.Flex;
+					}
+				});
+				return;
+			}
+
+			if (_isInstalled || PackageInstaller.IsInstalling) return;
 
 			_installButton.text = "Installing...";
 			_installButton.SetEnabled(false);
@@ -322,6 +346,14 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private void UpdateInstallButton()
 		{
+			if (_currentPackage != null && _currentPackage.listing_type == "project")
+			{
+				_installButton.text = "Download";
+				_installButton.SetEnabled(true);
+				_installButton.RemoveFromClassList("installed-button");
+				return;
+			}
+
 			if (_isInstalled)
 			{
 				_installButton.text = "Installed";

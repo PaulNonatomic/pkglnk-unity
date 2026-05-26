@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2026-04-29
+
+### Added
+- **Projects tab** in the browser. Lists every pkglnk.dev listing with `listing_type='project'` — full Unity repos, not UPM packages — via `GET /api/directory?type=project`.
+- **Download flow** for projects via the new `ProjectDownloader`. Hits `POST /api/projects/{id}/track-download` for the archive URL (logged for analytics), streams the zip to a temp file, extracts entry-by-entry into a temp directory adjacent to the target so the final move is an intra-volume rename, and offers a "Reveal in Explorer" dialog on success.
+- File picker defaults to the parent of the current Unity project root (`Path.GetDirectoryName(<projectRoot>)`).
+- Aborts cleanly with a dialog when `<chosenDir>/<repoName>` already exists.
+- Non-blocking progress reporting via the editor's `Progress` API (the bottom-right background-tasks panel). Reports both phases — `Downloading… <pct>%` then `Extracting… <n>/<total>` — and registers a cancel callback that aborts the in-flight web request.
+- Project card variant of the v-split install pill: violet **Download** chamber + neutral chamber showing the project's target Unity version (`project_unity_version`). Card shows "Downloading…" state while the download is in flight.
+- `PackageDetailView` install button switches to "Download" + `ProjectDownloader` flow when the package is a project.
+- New procedural `TabIcons.Cube` icon for the Projects tab.
+
+### Changed
+- `PackageData` extended with `listing_type` and `project_unity_version` fields to mirror the directory API.
+- `BrowseTab` enum gains a `Projects` value (appended to the end so existing session-restored tab indices stay valid).
+- `PkgLnkApiClient.FetchDirectory` takes an optional `listingType` argument that maps to the `?type=` query param.
+
 ## [0.10.7] - 2026-04-29
 
 ### Fixed

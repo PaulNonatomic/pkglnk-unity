@@ -71,6 +71,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private bool _isInstalled;
 		private bool _isBookmarked;
 		private bool _isGhost = true;
+		private bool _isProject;
+		private bool _isDownloading;
+		private string _boundProjectVersion;
 		private int _imageRecheckAttempts;
 		private IVisualElementScheduledItem _imageRecheckTask;
 
@@ -349,10 +352,13 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_boundOwner = null;
 			_boundRepo = null;
 			_boundInstallCount = -1;
+			_boundProjectVersion = null;
 			_boundHasDesc = false;
 			_boundShowBookmark = false;
 			_isInstalled = false;
 			_isBookmarked = false;
+			_isProject = false;
+			_isDownloading = false;
 			CancelImageRecheck();
 			_cardBody.style.display = DisplayStyle.None;
 			_ghostBody.style.display = DisplayStyle.Flex;
@@ -470,20 +476,43 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_platformIcon.style.backgroundImage = new StyleBackground(TabIcons.GetPlatformIcon(pkg.git_platform));
 			}
 
-			if (installCount != _boundInstallCount)
-			{
-				_boundInstallCount = installCount;
-				_installCountLabel.text = installCount > 0
-					? FormatUtils.FormatCount(installCount)
-					: "0";
-			}
+			// Project cards reuse the right chamber to show the target Unity
+			// version instead of the install count.
+			var wasProject = _isProject;
+			_isProject = pkg.listing_type == "project";
 
-			// Install state — skip redundant class/style changes
-			if (_isInstalled != isInstalled)
+			if (_isProject)
 			{
-				_isInstalled = isInstalled;
-				UpdateButtonDisplay();
-				UpdateInstalledHighlight();
+				var version = string.IsNullOrEmpty(pkg.project_unity_version) ? "—" : pkg.project_unity_version;
+				if (version != _boundProjectVersion)
+				{
+					_boundProjectVersion = version;
+					_installCountLabel.text = version;
+				}
+				// Force a button-display refresh on type flip so a pooled card
+				// that was previously bound to a package switches to Download.
+				if (!wasProject)
+				{
+					UpdateButtonDisplay();
+				}
+			}
+			else
+			{
+				if (installCount != _boundInstallCount)
+				{
+					_boundInstallCount = installCount;
+					_installCountLabel.text = installCount > 0
+						? FormatUtils.FormatCount(installCount)
+						: "0";
+				}
+
+				// Install state — skip redundant class/style changes
+				if (wasProject || _isInstalled != isInstalled)
+				{
+					_isInstalled = isInstalled;
+					UpdateButtonDisplay();
+					UpdateInstalledHighlight();
+				}
 			}
 
 			// Bookmark state — skip redundant icon/class changes
@@ -584,6 +613,23 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private void UpdateButtonDisplay()
 		{
+			// Project cards: Download chamber + Unity-version chamber. No "installed"
+			// state — projects download as archives, they aren't UPM-tracked.
+			if (_isProject)
+			{
+				_installButtonText.text = "Download";
+				_installButton.tooltip = "Download project";
+				_installButton.SetEnabled(!_isDownloading);
+				_installButton.RemoveFromClassList("installed-button");
+				if (_downloadTex != null)
+				{
+					_installButtonIcon.style.backgroundImage = new StyleBackground(_downloadTex);
+				}
+				_installButtonIcon.style.display = DisplayStyle.Flex;
+				_installCountLabel.style.display = DisplayStyle.Flex;
+				return;
+			}
+
 			if (_isInstalled)
 			{
 				_installButtonText.text = "Installed";
@@ -611,6 +657,30 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_installCountLabel.style.display = DisplayStyle.Flex;
 			}
 		}
+
+		/// <summary>
+		/// Card-level in-progress state for the project download flow. Mirrors
+		/// SetInstalling but for projects: hides icon + version chamber and
+		/// shows "Downloading..." in the label chamber.
+		/// </summary>
+		public void SetDownloading(bool downloading)
+		{
+			_isDownloading = downloading;
+			if (downloading)
+			{
+				_installButtonText.text = "Downloading...";
+				_installButton.SetEnabled(false);
+				_installButtonIcon.style.display = DisplayStyle.None;
+				_installCountLabel.style.display = DisplayStyle.None;
+			}
+			else
+			{
+				UpdateButtonDisplay();
+			}
+		}
+
+		/// <summary>True when the bound package has listing_type == "project".</summary>
+		public bool IsProject => _isProject;
 
 		private void OnTopicsWheel(WheelEvent evt)
 		{
