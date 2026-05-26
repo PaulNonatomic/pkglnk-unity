@@ -21,9 +21,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			Browse,
 			Collections,
 			Bookmarks,
-			MyPackages,
-			// Appended (not inserted) so existing session-state ints stay valid
-			Projects
+			MyPackages
 		}
 
 		private enum CollectionViewMode
@@ -34,6 +32,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private const string SessionKeyActiveTab = "PkgLnk_ActiveTab";
 		private const string SessionKeyDetailSlug = "PkgLnk_CollectionDetailSlug";
+		private const string SessionKeyListingType = "PkgLnk_ListingType";
 
 		private const double DebounceSeconds = 0.4;
 		private const int PageSize = 40;
@@ -61,7 +60,6 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		// Tabs
 		private readonly Button _browseTab;
-		private readonly Button _projectsTab;
 		private readonly Button _collectionsTab;
 		private readonly Button _bookmarksTab;
 		private readonly Button _myPackagesTab;
@@ -83,6 +81,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly Button _createCollectionButton;
 		private CollectionViewMode _collectionViewMode = CollectionViewMode.All;
 		private bool _myCollectionsFetched;
+
+		// Listing-type toggle (Directory tab only): packages vs projects
+		private readonly VisualElement _listingTypeRow;
+		private readonly Button _packagesToggleButton;
+		private readonly Button _projectsToggleButton;
+		private string _listingType = "package";
 
 		// Add to Collection dropdown
 		private readonly AddToCollectionDropdown _addToCollectionDropdown;
@@ -251,9 +255,6 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_browseTab = CreateTabButton("Directory", TabIcons.Compass, () => SwitchTab(BrowseTab.Browse));
 			tabBar.Add(_browseTab);
 
-			_projectsTab = CreateTabButton("Projects", TabIcons.Cube, () => SwitchTab(BrowseTab.Projects));
-			tabBar.Add(_projectsTab);
-
 			_collectionsTab = CreateTabButton("Collections", TabIcons.Folder, () => SwitchTab(BrowseTab.Collections));
 			tabBar.Add(_collectionsTab);
 
@@ -314,6 +315,22 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_createCollectionButton.AddToClassList("create-collection-button");
 			_createCollectionButton.style.display = DisplayStyle.None;
 			_collectionToggleRow.Add(_createCollectionButton);
+
+			// Listing-type toggle (Directory tab only)
+			_listingTypeRow = new VisualElement();
+			_listingTypeRow.AddToClassList("listing-type-row");
+			_listingTypeRow.style.display = DisplayStyle.None;
+			_listView.Add(_listingTypeRow);
+
+			_packagesToggleButton = new Button(() => SwitchListingType("package"));
+			_packagesToggleButton.text = "Packages";
+			_packagesToggleButton.AddToClassList("toggle-button");
+			_listingTypeRow.Add(_packagesToggleButton);
+
+			_projectsToggleButton = new Button(() => SwitchListingType("project"));
+			_projectsToggleButton.text = "Projects";
+			_projectsToggleButton.AddToClassList("toggle-button");
+			_listingTypeRow.Add(_projectsToggleButton);
 
 			// Status label
 			_statusLabel = new Label();
@@ -425,6 +442,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			{
 				_activeTab = (BrowseTab)savedTab;
 			}
+
+			// Restore persisted listing-type filter for the Directory tab
+			var savedListingType = SessionState.GetString(SessionKeyListingType, "package");
+			_listingType = savedListingType == "project" ? "project" : "package";
 
 			// Initial state
 			UpdateAuthUI();
@@ -758,7 +779,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (_activeTab == tab) return;
 
 			// Auth-required tabs show login modal when not signed in
-			if (tab != BrowseTab.Browse && tab != BrowseTab.Projects && tab != BrowseTab.Collections && !PkgLnkAuth.IsLoggedIn)
+			if (tab != BrowseTab.Browse && tab != BrowseTab.Collections && !PkgLnkAuth.IsLoggedIn)
 			{
 				ShowLoginModal(tab);
 				return;
@@ -804,7 +825,6 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private void UpdateTabState()
 		{
 			SetTabActive(_browseTab, _activeTab == BrowseTab.Browse);
-			SetTabActive(_projectsTab, _activeTab == BrowseTab.Projects);
 			SetTabActive(_collectionsTab, _activeTab == BrowseTab.Collections);
 			SetTabActive(_bookmarksTab, _activeTab == BrowseTab.Bookmarks);
 			SetTabActive(_myPackagesTab, _activeTab == BrowseTab.MyPackages);
@@ -821,7 +841,13 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				? DisplayStyle.Flex
 				: DisplayStyle.None;
 
+			// Listing-type toggle row (Directory tab only)
+			_listingTypeRow.style.display = _activeTab == BrowseTab.Browse
+				? DisplayStyle.Flex
+				: DisplayStyle.None;
+
 			UpdateCollectionToggleButtons();
+			UpdateListingTypeButtons();
 		}
 
 		private static Button CreateTabButton(string label, Texture2D icon, Action onClick)
@@ -857,6 +883,42 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			{
 				tab.RemoveFromClassList("tab-button-active");
 			}
+		}
+
+		private void UpdateListingTypeButtons()
+		{
+			var isPackages = _listingType != "project";
+
+			if (isPackages)
+			{
+				_packagesToggleButton.AddToClassList("toggle-button-active");
+				_projectsToggleButton.RemoveFromClassList("toggle-button-active");
+			}
+			else
+			{
+				_packagesToggleButton.RemoveFromClassList("toggle-button-active");
+				_projectsToggleButton.AddToClassList("toggle-button-active");
+			}
+		}
+
+		private void SwitchListingType(string listingType)
+		{
+			if (string.IsNullOrEmpty(listingType)) listingType = "package";
+			if (_listingType == listingType) return;
+
+			_listingType = listingType;
+			SessionState.SetString(SessionKeyListingType, listingType);
+
+			HideAllPoolCards();
+			_scrollView.scrollOffset = Vector2.zero;
+			_searchField.SetValueWithoutNotify(string.Empty);
+			_currentQuery = string.Empty;
+			_currentTopic = string.Empty;
+			_clearSearchButton.style.display = DisplayStyle.None;
+			_debounceActive = false;
+
+			UpdateListingTypeButtons();
+			FetchPackages(true);
 		}
 
 		private void UpdateCollectionToggleButtons()
@@ -990,17 +1052,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 						_currentTopic,
 						_currentPage,
 						PageSize,
-						(response, error) => OnFetchComplete(response, error, freshSearch));
-					break;
-
-				case BrowseTab.Projects:
-					PkgLnkApiClient.FetchDirectory(
-						_currentQuery,
-						_currentTopic,
-						_currentPage,
-						PageSize,
 						(response, error) => OnFetchComplete(response, error, freshSearch),
-						listingType: "project");
+						listingType: _listingType);
 					break;
 
 				case BrowseTab.Bookmarks:
@@ -1068,7 +1121,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				HideAllPoolCards();
 				var emptyMessage = _activeTab switch
 				{
-					BrowseTab.Projects => "No projects found.",
+					BrowseTab.Browse => _listingType == "project" ? "No projects found." : "No packages found.",
 					BrowseTab.Bookmarks => "No bookmarked packages.",
 					BrowseTab.MyPackages => "No packages found.",
 					_ => "No packages found."
