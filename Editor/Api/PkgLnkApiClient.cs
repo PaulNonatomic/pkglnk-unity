@@ -26,9 +26,10 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			string topic,
 			int page,
 			int limit,
-			Action<DirectoryResponse, string> onComplete)
+			Action<DirectoryResponse, string> onComplete,
+			string listingType = null)
 		{
-			var url = BuildUrl(query, topic, page, limit);
+			var url = BuildUrl(query, topic, page, limit, listingType);
 			var request = UnityWebRequest.Get(url);
 			request.SetRequestHeader("User-Agent", UserAgent);
 
@@ -537,7 +538,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			};
 		}
 
-		private static string BuildUrl(string query, string topic, int page, int limit)
+		private static string BuildUrl(string query, string topic, int page, int limit, string listingType = null)
 		{
 			var url = $"{BaseUrl}?page={page}&limit={limit}";
 
@@ -549,6 +550,11 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			if (!string.IsNullOrWhiteSpace(topic))
 			{
 				url += $"&topic={Uri.EscapeDataString(topic)}";
+			}
+
+			if (!string.IsNullOrWhiteSpace(listingType))
+			{
+				url += $"&type={Uri.EscapeDataString(listingType)}";
 			}
 
 			return url;

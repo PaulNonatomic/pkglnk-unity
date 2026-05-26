@@ -26,5 +26,13 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		public string updated_at = string.Empty;
 		public string created_at = string.Empty;
 		public bool is_private;
+
+		// Discriminator for the row's kind. "package" (UPM git URL), "project"
+		// (downloadable repo archive), or "nuget". Empty == legacy / treat as package.
+		public string listing_type = string.Empty;
+
+		// Populated only when listing_type == "project". Mirror of the source
+		// repo's ProjectSettings/ProjectVersion.txt (e.g. "2022.3.10f1").
+		public string project_unity_version = string.Empty;
 	}
 }

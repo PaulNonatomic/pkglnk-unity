@@ -21,7 +21,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			Browse,
 			Collections,
 			Bookmarks,
-			MyPackages
+			MyPackages,
+			// Appended (not inserted) so existing session-state ints stay valid
+			Projects
 		}
 
 		private enum CollectionViewMode
@@ -59,6 +61,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		// Tabs
 		private readonly Button _browseTab;
+		private readonly Button _projectsTab;
 		private readonly Button _collectionsTab;
 		private readonly Button _bookmarksTab;
 		private readonly Button _myPackagesTab;
@@ -247,6 +250,9 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_browseTab = CreateTabButton("Directory", TabIcons.Compass, () => SwitchTab(BrowseTab.Browse));
 			tabBar.Add(_browseTab);
+
+			_projectsTab = CreateTabButton("Projects", TabIcons.Cube, () => SwitchTab(BrowseTab.Projects));
+			tabBar.Add(_projectsTab);
 
 			_collectionsTab = CreateTabButton("Collections", TabIcons.Folder, () => SwitchTab(BrowseTab.Collections));
 			tabBar.Add(_collectionsTab);
@@ -752,7 +758,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (_activeTab == tab) return;
 
 			// Auth-required tabs show login modal when not signed in
-			if (tab != BrowseTab.Browse && tab != BrowseTab.Collections && !PkgLnkAuth.IsLoggedIn)
+			if (tab != BrowseTab.Browse && tab != BrowseTab.Projects && tab != BrowseTab.Collections && !PkgLnkAuth.IsLoggedIn)
 			{
 				ShowLoginModal(tab);
 				return;
@@ -798,6 +804,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private void UpdateTabState()
 		{
 			SetTabActive(_browseTab, _activeTab == BrowseTab.Browse);
+			SetTabActive(_projectsTab, _activeTab == BrowseTab.Projects);
 			SetTabActive(_collectionsTab, _activeTab == BrowseTab.Collections);
 			SetTabActive(_bookmarksTab, _activeTab == BrowseTab.Bookmarks);
 			SetTabActive(_myPackagesTab, _activeTab == BrowseTab.MyPackages);
@@ -986,6 +993,16 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 						(response, error) => OnFetchComplete(response, error, freshSearch));
 					break;
 
+				case BrowseTab.Projects:
+					PkgLnkApiClient.FetchDirectory(
+						_currentQuery,
+						_currentTopic,
+						_currentPage,
+						PageSize,
+						(response, error) => OnFetchComplete(response, error, freshSearch),
+						listingType: "project");
+					break;
+
 				case BrowseTab.Bookmarks:
 					if (!PkgLnkAuth.IsLoggedIn)
 					{
@@ -1051,6 +1068,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				HideAllPoolCards();
 				var emptyMessage = _activeTab switch
 				{
+					BrowseTab.Projects => "No projects found.",
 					BrowseTab.Bookmarks => "No bookmarked packages.",
 					BrowseTab.MyPackages => "No packages found.",
 					_ => "No packages found."
@@ -1392,6 +1410,15 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private void OnInstallClicked(PackageCard card)
 		{
+			if (card.Package == null) return;
+
+			// Project listings download to disk instead of going through UPM.
+			if (card.IsProject)
+			{
+				OnDownloadClicked(card);
+				return;
+			}
+
 			if (PackageInstaller.IsInstalling) return;
 
 			card.SetInstalling(true);
@@ -1416,6 +1443,23 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					Debug.LogError($"[PkgLnk] Failed to install {card.Package.display_name}: {error}");
 				}
 			}, phase => card.SetInstallPhaseText(phase));
+		}
+
+		private void OnDownloadClicked(PackageCard card)
+		{
+			var pkg = card.Package;
+			if (pkg == null) return;
+
+			card.SetDownloading(true);
+			ProjectDownloader.Download(pkg, (success, error, _) =>
+			{
+				card.SetDownloading(false);
+
+				if (!success && !string.IsNullOrEmpty(error) && error != "Cancelled.")
+				{
+					Debug.LogError($"[PkgLnk] Failed to download {pkg.display_name}: {error}");
+				}
+			});
 		}
 
 		private void OnBookmarkClicked(PackageCard card)
