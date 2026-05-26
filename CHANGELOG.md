@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1] - 2026-04-29
+
+### Changed
+- Projects are now reached via a **Packages / Projects** toggle under the search bar on the Directory tab, defaulting to Packages. Replaces the dedicated Projects tab introduced in 0.11.0 — one less top-level destination, projects discoverable from the same surface users already know.
+- Toggle selection persists in `SessionState` across reloads (`PkgLnk_ListingType`).
+- Directory empty-state message branches on the selected listing type ("No packages found." / "No projects found.").
+
+### Removed
+- Standalone Projects tab and its `BrowseTab.Projects` enum entry, the `_projectsTab` button, and the `TabIcons.Cube` procedural icon — all replaced by the inline toggle.
+
 ## [0.11.0] - 2026-04-29
 
 ### Added

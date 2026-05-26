@@ -63,7 +63,7 @@ Install any package directly into your project through the Unity Package Manager
 
 ### Projects
 
-A separate **Projects** tab lists full Unity project repositories (as opposed to UPM packages). Project cards show the target Unity version and feature a **Download** button that opens a folder picker (defaulting to the parent of your current project root), downloads the repo archive, and extracts it next to your other projects. Progress is reported non-blockingly via Unity's background-task panel so you can keep working while the download and extract complete.
+The Directory tab carries a **Packages / Projects** toggle just below the search bar. Projects are full Unity project repositories (as opposed to UPM packages). Project cards show the target Unity version and feature a **Download** button that opens a folder picker (defaulting to the parent of your current project root), downloads the repo archive, and extracts it next to your other projects. Progress is reported non-blockingly via Unity's background-task panel so you can keep working while the download and extract complete.
 
 ### Bookmarks
 
@@ -90,7 +90,7 @@ From there you can:
 3. **Filter** — Click the filter button to narrow results by status, platform, or topic
 4. **View details** — Click any card to see full package information
 5. **Install** — Click the install button on a card or in the detail view
-6. **Projects** — Switch to the Projects tab to browse full Unity repos; click Download to choose a destination and copy the project to disk
+6. **Projects** — Use the Packages / Projects toggle under the search bar to switch the Directory listing between UPM packages and full Unity repos; click Download to choose a destination and copy the project to disk
 7. **Sign in** — Click "Sign In" in the header to authenticate via your browser
 8. **Bookmark** — Click the star icon on any card to save it to your bookmarks
 9. **My Packages** — View packages you own (requires sign-in)

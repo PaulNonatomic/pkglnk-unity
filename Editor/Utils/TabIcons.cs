@@ -14,7 +14,6 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 		private static Texture2D _grid;
 		private static Texture2D _sun;
 		private static Texture2D _moon;
-		private static Texture2D _cube;
 		private static Texture2D _github;
 		private static Texture2D _gitlab;
 		private static Texture2D _bitbucket;
@@ -24,7 +23,6 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 		public static Texture2D Grid => _grid ??= Generate(GridBitmap);
 		public static Texture2D Sun => _sun ??= Generate(SunBitmap);
 		public static Texture2D Moon => _moon ??= Generate(MoonBitmap);
-		public static Texture2D Cube => _cube ??= Generate(CubeBitmap);
 		public static Texture2D GitHub => _github ??= LoadAsset("source-icon-github.png");
 		public static Texture2D GitLab => _gitlab ??= LoadAsset("source-icon-gitlab.png");
 		public static Texture2D Bitbucket => _bitbucket ??= Generate(BitbucketBitmap);
@@ -131,26 +129,6 @@ namespace Nonatomic.PkgLnk.Editor.Utils
 			"..##......#...",
 			"...##....##...",
 			"....######....",
-			"..............",
-		};
-
-		// Cube outline (Projects tab) — a closed box, distinct from the
-		// Grid (four small squares) and Folder (Collections) shapes.
-		private static readonly string[] CubeBitmap =
-		{
-			"..............",
-			"..............",
-			".############.",
-			".#..........#.",
-			".#..........#.",
-			".#..........#.",
-			".#..........#.",
-			".#..........#.",
-			".#..........#.",
-			".#..........#.",
-			".#..........#.",
-			".############.",
-			"..............",
 			"..............",
 		};
 
