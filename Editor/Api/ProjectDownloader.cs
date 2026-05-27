@@ -82,9 +82,14 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				return;
 			}
 
+			// Codeload archives (GitHub/GitLab/Bitbucket) are served chunked with
+			// no Content-Length header, so UnityWebRequest.downloadProgress sits
+			// at 0 until the response completes. Use Indefinite so the bar
+			// visibly pulses; the description carries the live byte count.
 			var progressId = Progress.Start(
 				$"Downloading {pkg.display_name}",
-				"Requesting archive URL…");
+				"Requesting archive URL…",
+				Progress.Options.Indefinite);
 
 			var cancelled = false;
 			Progress.RegisterCancelCallback(progressId, () =>
@@ -190,11 +195,12 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			request.SetRequestHeader("User-Agent", UserAgent);
 
 			Progress.SetDescription(progressId, "Downloading archive…");
-			Progress.Report(progressId, 0f);
 
 			var op = request.SendWebRequest();
 
-			// Poll download progress from editor-update so Progress stays live.
+			// Poll download progress from editor-update so the description stays
+			// live. Codeload responses are chunked (no Content-Length), so
+			// downloadProgress doesn't move — use downloadedBytes instead.
 			EditorApplication.CallbackFunction progressTick = null;
 			progressTick = () =>
 			{
@@ -206,8 +212,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				}
 				if (!request.isDone)
 				{
-					var p = request.downloadProgress;
-					Progress.Report(progressId, p * 0.85f, $"Downloading… {Mathf.RoundToInt(p * 100f)}%");
+					Progress.SetDescription(progressId, $"Downloading… {FormatBytes(request.downloadedBytes)}");
 				}
 			};
 			EditorApplication.update += progressTick;
@@ -241,7 +246,6 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				try
 				{
 					Progress.SetDescription(progressId, "Extracting…");
-					Progress.Report(progressId, 0.86f);
 
 					Directory.CreateDirectory(tempExtract);
 					ExtractZipWithProgress(tempArchive, tempExtract, progressId, isCancelled);
@@ -273,7 +277,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 					Directory.Move(topLevel, targetPath);
 					CleanupTemp(tempArchive, tempExtract);
 
-					Progress.Report(progressId, 1f, "Done");
+					Progress.SetDescription(progressId, "Done");
 					Progress.Finish(progressId, Progress.Status.Succeeded);
 
 					var reveal = EditorUtility.DisplayDialog(
@@ -335,8 +339,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				}
 
 				done++;
-				var p = 0.86f + (done / (float)total) * 0.14f;
-				Progress.Report(progressId, p, $"Extracting… {done}/{total}");
+				Progress.SetDescription(progressId, $"Extracting… {done}/{total}");
 			}
 		}
 
@@ -351,6 +354,14 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		{
 			try { if (File.Exists(archive)) File.Delete(archive); } catch { /* best-effort */ }
 			try { if (Directory.Exists(extractDir)) Directory.Delete(extractDir, true); } catch { /* best-effort */ }
+		}
+
+		private static string FormatBytes(ulong bytes)
+		{
+			if (bytes < 1024UL) return $"{bytes} B";
+			if (bytes < 1024UL * 1024UL) return $"{bytes / 1024.0:F1} KB";
+			if (bytes < 1024UL * 1024UL * 1024UL) return $"{bytes / (1024.0 * 1024.0):F1} MB";
+			return $"{bytes / (1024.0 * 1024.0 * 1024.0):F2} GB";
 		}
 	}
 }

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.2] - 2026-04-29
+
+### Fixed
+- Project download progress appeared frozen at 0% even while the file was successfully downloading. Codeload archives (GitHub/GitLab/Bitbucket) are served chunked with no `Content-Length` header, so `UnityWebRequest.downloadProgress` stays at zero until the response completes — there was no determinate fraction to display.
+- `ProjectDownloader` now starts its `Progress` task with `Progress.Options.Indefinite` so the bar visibly pulses through both phases, and updates the description with the live byte count (`Downloading… 4.7 MB`) using `UnityWebRequest.downloadedBytes`. Extract phase reports `Extracting… n/total` in the same task.
+
 ## [0.11.1] - 2026-04-29
 
 ### Changed
