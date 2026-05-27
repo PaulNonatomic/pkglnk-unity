@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.3] - 2026-04-29
+
+### Fixed
+- Project downloads silently failed when a Unity domain reload (script recompile, play-mode toggle, asset import, …) fired mid-download. The in-flight `UnityWebRequest` closure was killed by the reload, so `op.completed` never ran — no success dialog, no failure dialog, no file on disk, just an orphaned Progress entry that eventually vanished.
+- `ProjectDownloader` now tracks every in-flight job in a static list and registers an `AssemblyReloadEvents.beforeAssemblyReload` handler that aborts each request, finishes its Progress entry as `Failed`, cleans up temp files, and emits a `[PkgLnk] Aborting N project download(s) — Unity editor is reloading.` Console warning.
+- Both HTTP requests now have explicit timeouts so a stalled connection can't hang forever (30s on `POST /api/projects/{id}/track-download`, 10 min on the archive GET).
+- Every failure path — cancellation, error, timeout, reload abort — now logs to the Unity Console (`Debug.Log` / `LogError`) so future silent failures leave a paper trail.
+
 ## [0.11.2] - 2026-04-29
 
 ### Fixed

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
@@ -28,6 +29,62 @@ namespace Nonatomic.PkgLnk.Editor.Api
 	{
 		private const string TrackDownloadBase = "https://pkglnk.dev/api/projects";
 		private const string UserAgent = "pkglnk-unity/0.11";
+
+		// Hard timeouts so a stalled connection can't hang forever. UnityWebRequest
+		// defaults to 0 (no timeout). The POST is tiny; the archive may be MBs of zip.
+		private const int TrackDownloadTimeoutSeconds = 30;
+		private const int ArchiveDownloadTimeoutSeconds = 600;
+
+		private sealed class InFlightJob
+		{
+			public string DisplayName;
+			public UnityWebRequest Request;
+			public int ProgressId;
+			public string TempArchive;
+			public string TempExtract;
+			public Action<bool, string, string> OnComplete;
+		}
+
+		// Track every active download so a domain reload (script recompile,
+		// play-mode toggle, …) can cleanly abort them all instead of leaving
+		// orphaned Progress entries and dead closures behind.
+		private static readonly List<InFlightJob> InFlight = new List<InFlightJob>();
+
+		[InitializeOnLoadMethod]
+		private static void RegisterReloadHandler()
+		{
+			AssemblyReloadEvents.beforeAssemblyReload -= AbortOnReload;
+			AssemblyReloadEvents.beforeAssemblyReload += AbortOnReload;
+		}
+
+		private static void AbortOnReload()
+		{
+			if (InFlight.Count == 0) return;
+
+			Debug.LogWarning($"[PkgLnk] Aborting {InFlight.Count} project download(s) — Unity editor is reloading.");
+
+			// Snapshot so we can iterate while jobs remove themselves.
+			var snapshot = InFlight.ToArray();
+			InFlight.Clear();
+
+			foreach (var job in snapshot)
+			{
+				try { job.Request?.Abort(); } catch { /* best-effort */ }
+				try { Progress.Finish(job.ProgressId, Progress.Status.Failed); } catch { /* best-effort */ }
+				CleanupTemp(job.TempArchive, job.TempExtract);
+				job.OnComplete?.Invoke(false, "Aborted by editor reload.", null);
+			}
+		}
+
+		private static void RegisterJob(InFlightJob job)
+		{
+			InFlight.Add(job);
+		}
+
+		private static void RetireJob(InFlightJob job)
+		{
+			InFlight.Remove(job);
+		}
 
 		/// <summary>
 		/// Kicks off the project download flow. Non-blocking; <paramref name="onComplete"/>
@@ -98,18 +155,30 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				return true;
 			});
 
-			FetchArchiveUrl(pkg.id, (archiveUrl, error) =>
+			var job = new InFlightJob
+			{
+				DisplayName = pkg.display_name,
+				ProgressId = progressId,
+				OnComplete = onComplete,
+			};
+			RegisterJob(job);
+
+			FetchArchiveUrl(pkg.id, job, (archiveUrl, error) =>
 			{
 				if (cancelled)
 				{
+					RetireJob(job);
 					Progress.Remove(progressId);
+					Debug.Log($"[PkgLnk] Project download cancelled by user: {pkg.display_name}");
 					onComplete?.Invoke(false, "Cancelled.", null);
 					return;
 				}
 
 				if (!string.IsNullOrEmpty(error) || string.IsNullOrEmpty(archiveUrl))
 				{
+					RetireJob(job);
 					Progress.Finish(progressId, Progress.Status.Failed);
+					Debug.LogError($"[PkgLnk] Could not resolve archive URL for {pkg.display_name}: {error}");
 					EditorUtility.DisplayDialog(
 						"Download Failed",
 						$"Could not resolve archive URL.\n\n{error}",
@@ -118,13 +187,13 @@ namespace Nonatomic.PkgLnk.Editor.Api
 					return;
 				}
 
-				DownloadAndExtract(pkg, archiveUrl, targetPath, progressId, () => cancelled, onComplete);
+				DownloadAndExtract(pkg, archiveUrl, targetPath, job, () => cancelled, onComplete);
 			});
 		}
 
 		// ─── Track-download endpoint ─────────────────────────────────────────
 
-		private static void FetchArchiveUrl(string projectId, Action<string, string> onComplete)
+		private static void FetchArchiveUrl(string projectId, InFlightJob job, Action<string, string> onComplete)
 		{
 			var url = $"{TrackDownloadBase}/{Uri.EscapeDataString(projectId)}/track-download";
 			var request = new UnityWebRequest(url, "POST");
@@ -132,20 +201,29 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			request.downloadHandler = new DownloadHandlerBuffer();
 			request.SetRequestHeader("Content-Type", "application/json");
 			request.SetRequestHeader("User-Agent", UserAgent);
+			request.timeout = TrackDownloadTimeoutSeconds;
+
+			job.Request = request;
 
 			var op = request.SendWebRequest();
 			op.completed += _ =>
 			{
+				// If the reload handler has already aborted us, the closure may
+				// fire one last time — bail rather than running the success path.
+				if (job.Request != request) { try { request.Dispose(); } catch { } return; }
+
 				if (request.result != UnityWebRequest.Result.Success)
 				{
 					var err = request.error ?? "request failed";
 					request.Dispose();
+					job.Request = null;
 					onComplete?.Invoke(null, err);
 					return;
 				}
 
 				var text = request.downloadHandler.text;
 				request.Dispose();
+				job.Request = null;
 				onComplete?.Invoke(ParseArchiveUrl(text), null);
 			};
 		}
@@ -172,16 +250,20 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			PackageData pkg,
 			string archiveUrl,
 			string targetPath,
-			int progressId,
+			InFlightJob job,
 			Func<bool> isCancelled,
 			Action<bool, string, string> onComplete)
 		{
+			var progressId = job.ProgressId;
+
 			// Extract directly under the target's parent so the final move is an
 			// intra-volume rename rather than a cross-volume copy.
 			var targetParent = Path.GetDirectoryName(targetPath);
 			if (string.IsNullOrEmpty(targetParent))
 			{
+				RetireJob(job);
 				Progress.Finish(progressId, Progress.Status.Failed);
+				Debug.LogError($"[PkgLnk] Invalid target path for {pkg.display_name}: {targetPath}");
 				onComplete?.Invoke(false, "Invalid target path.", null);
 				return;
 			}
@@ -190,9 +272,15 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			var tempArchive = Path.Combine(Path.GetTempPath(), $"pkglnk-{Guid.NewGuid():N}.zip");
 			var tempExtract = Path.Combine(targetParent, $".pkglnk-tmp-{Guid.NewGuid():N}");
 
+			job.TempArchive = tempArchive;
+			job.TempExtract = tempExtract;
+
 			var request = new UnityWebRequest(archiveUrl, "GET");
 			request.downloadHandler = new DownloadHandlerFile(tempArchive) { removeFileOnAbort = true };
 			request.SetRequestHeader("User-Agent", UserAgent);
+			request.timeout = ArchiveDownloadTimeoutSeconds;
+
+			job.Request = request;
 
 			Progress.SetDescription(progressId, "Downloading archive…");
 
@@ -221,11 +309,17 @@ namespace Nonatomic.PkgLnk.Editor.Api
 			{
 				EditorApplication.update -= progressTick;
 
+				// Reload handler already aborted us — bail without re-running cleanup.
+				if (job.Request != request) { try { request.Dispose(); } catch { } return; }
+
 				if (isCancelled())
 				{
 					request.Dispose();
+					job.Request = null;
+					RetireJob(job);
 					CleanupTemp(tempArchive, tempExtract);
 					Progress.Remove(progressId);
+					Debug.Log($"[PkgLnk] Project download cancelled by user: {pkg.display_name}");
 					onComplete?.Invoke(false, "Cancelled.", null);
 					return;
 				}
@@ -234,14 +328,18 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				{
 					var err = request.error ?? "download failed";
 					request.Dispose();
+					job.Request = null;
+					RetireJob(job);
 					CleanupTemp(tempArchive, tempExtract);
 					Progress.Finish(progressId, Progress.Status.Failed);
+					Debug.LogError($"[PkgLnk] Project download failed for {pkg.display_name}: {err}");
 					EditorUtility.DisplayDialog("Download Failed", $"Download error: {err}", "OK");
 					onComplete?.Invoke(false, err, null);
 					return;
 				}
 
 				request.Dispose();
+				job.Request = null;
 
 				try
 				{
@@ -252,8 +350,10 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 					if (isCancelled())
 					{
+						RetireJob(job);
 						CleanupTemp(tempArchive, tempExtract);
 						Progress.Remove(progressId);
+						Debug.Log($"[PkgLnk] Project download cancelled during extract: {pkg.display_name}");
 						onComplete?.Invoke(false, "Cancelled.", null);
 						return;
 					}
@@ -264,8 +364,10 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 					if (Directory.Exists(targetPath))
 					{
+						RetireJob(job);
 						CleanupTemp(tempArchive, tempExtract);
 						Progress.Finish(progressId, Progress.Status.Failed);
+						Debug.LogError($"[PkgLnk] Folder appeared at {targetPath} while downloading {pkg.display_name}.");
 						EditorUtility.DisplayDialog(
 							"Folder Already Exists",
 							$"A folder appeared at {targetPath} while downloading. Aborting.",
@@ -276,9 +378,11 @@ namespace Nonatomic.PkgLnk.Editor.Api
 
 					Directory.Move(topLevel, targetPath);
 					CleanupTemp(tempArchive, tempExtract);
+					RetireJob(job);
 
 					Progress.SetDescription(progressId, "Done");
 					Progress.Finish(progressId, Progress.Status.Succeeded);
+					Debug.Log($"[PkgLnk] Project downloaded: {pkg.display_name} → {targetPath}");
 
 					var reveal = EditorUtility.DisplayDialog(
 						"Project Downloaded",
@@ -294,8 +398,10 @@ namespace Nonatomic.PkgLnk.Editor.Api
 				}
 				catch (Exception ex)
 				{
+					RetireJob(job);
 					CleanupTemp(tempArchive, tempExtract);
 					Progress.Finish(progressId, Progress.Status.Failed);
+					Debug.LogError($"[PkgLnk] Extract failed for {pkg.display_name}: {ex}");
 					EditorUtility.DisplayDialog("Extract Failed", ex.Message, "OK");
 					onComplete?.Invoke(false, ex.Message, null);
 				}
