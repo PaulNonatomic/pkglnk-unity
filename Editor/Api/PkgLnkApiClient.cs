@@ -73,6 +73,7 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		{
 			var response = JsonUtility.FromJson<DirectoryResponse>(json);
 			response.installCounts = ParseInstallCounts(json);
+			response.downloadCounts = ParseDownloadCounts(json);
 			return response;
 		}
 
@@ -83,8 +84,22 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		/// </summary>
 		internal static Dictionary<string, int> ParseInstallCounts(string json)
 		{
+			return ParseIntDictField(json, "installCounts");
+		}
+
+		/// <summary>
+		/// Manually parses the downloadCounts JSON object (project download events).
+		/// Expected format: "downloadCounts":{"uuid1":12,"uuid2":3}
+		/// </summary>
+		internal static Dictionary<string, int> ParseDownloadCounts(string json)
+		{
+			return ParseIntDictField(json, "downloadCounts");
+		}
+
+		private static Dictionary<string, int> ParseIntDictField(string json, string fieldName)
+		{
 			var result = new Dictionary<string, int>();
-			var startMarker = "\"installCounts\":{";
+			var startMarker = $"\"{fieldName}\":{{";
 			var start = json.IndexOf(startMarker, StringComparison.Ordinal);
 			if (start < 0) return result;
 
