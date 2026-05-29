@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.0] - 2026-04-29
+
+### Added
+- **Download counts on project cards.** Pkglnk.dev's directory API now returns a `downloadCounts` dictionary alongside `installCounts`, populated from the same `installs` table (rows with `event_type='download'`, de-duped by session and bot-filtered via the existing `fetchDownloadCounts` helper). The Unity client reads it and surfaces the count in the right chamber of the v-split pill on project cards — the exact same affordance as install counts on package cards.
+- After a successful project download, the local count is optimistically incremented and the card chamber re-renders, matching the existing install flow.
+- `PackageDetailView` stats row reads "N downloads" for projects (was always "N installs").
+
+### Changed
+- Project card right chamber now shows the **download count** instead of the target Unity version. The Unity version is still available in the detail view and on pkglnk.dev — the card is a denser/listy surface and the count is the more useful at-a-glance signal there.
+- `DirectoryResponse` gains a `downloadCounts` field, populated by `PkgLnkApiClient.ParseDownloadCounts` (parallel to `ParseInstallCounts`). The two parsers now share a generalised `ParseIntDictField` helper.
+- `PackageCard.Bind` and `PackageDetailView.Show` both take an extra `downloadCount` argument.
+
 ## [0.11.3] - 2026-04-29
 
 ### Fixed

@@ -20,5 +20,12 @@ namespace Nonatomic.PkgLnk.Editor.Api
 		/// </summary>
 		[NonSerialized]
 		public Dictionary<string, int> installCounts = new Dictionary<string, int>();
+
+		/// <summary>
+		/// Download counts keyed by package ID. Only populated for project
+		/// listings (listing_type == "project"); empty for packages.
+		/// </summary>
+		[NonSerialized]
+		public Dictionary<string, int> downloadCounts = new Dictionary<string, int>();
 	}
 }

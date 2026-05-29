@@ -109,6 +109,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private readonly List<PackageData> _allPackages = new List<PackageData>();
 		private readonly List<PackageData> _filteredPackages = new List<PackageData>();
 		private readonly Dictionary<string, int> _installCounts = new Dictionary<string, int>();
+		private readonly Dictionary<string, int> _downloadCounts = new Dictionary<string, int>();
 		private readonly HashSet<string> _bookmarkedIds = new HashSet<string>();
 		private bool _bookmarksFetched;
 		private int _consecutiveEmptyFilterFetches;
@@ -1022,6 +1023,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_allPackages.Clear();
 				_filteredPackages.Clear();
 				_installCounts.Clear();
+				_downloadCounts.Clear();
 				_consecutiveEmptyFilterFetches = 0;
 				_scrollView.scrollOffset = Vector2.zero;
 				HideStatus();
@@ -1108,6 +1110,14 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				foreach (var kvp in response.installCounts)
 				{
 					_installCounts[kvp.Key] = kvp.Value;
+				}
+			}
+
+			if (response.downloadCounts != null)
+			{
+				foreach (var kvp in response.downloadCounts)
+				{
+					_downloadCounts[kvp.Key] = kvp.Value;
 				}
 			}
 
@@ -1274,9 +1284,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 						if (card.Package != pkg)
 						{
 							_installCounts.TryGetValue(pkg.id, out var installCount);
+							_downloadCounts.TryGetValue(pkg.id, out var downloadCount);
 							var isBookmarked = _bookmarkedIds.Contains(pkg.id);
 							var isInstalled = PackageInstaller.IsInstalled(pkg);
-							card.Bind(pkg, installCount, isBookmarked, showBookmark, isInstalled);
+							card.Bind(pkg, installCount, downloadCount, isBookmarked, showBookmark, isInstalled);
 						}
 					}
 					else
@@ -1378,7 +1389,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private void OnCardClicked(PackageCard card)
 		{
 			_installCounts.TryGetValue(card.Package.id, out var installCount);
-			_detailView.Show(card.Package, installCount);
+			_downloadCounts.TryGetValue(card.Package.id, out var downloadCount);
+			_detailView.Show(card.Package, installCount, downloadCount);
 			_listView.style.display = DisplayStyle.None;
 			_detailView.style.display = DisplayStyle.Flex;
 		}
@@ -1416,10 +1428,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					if (card.Package?.slug == slug)
 					{
 						_installCounts.TryGetValue(freshPkg.id, out var installCount);
+						_downloadCounts.TryGetValue(freshPkg.id, out var downloadCount);
 						var isBookmarked = _bookmarkedIds.Contains(freshPkg.id);
 						var showBookmark = PkgLnkAuth.IsLoggedIn && _activeTab != BrowseTab.MyPackages;
 						var isInstalled = PackageInstaller.IsInstalled(freshPkg);
-						card.Bind(freshPkg, installCount, isBookmarked, showBookmark, isInstalled);
+						card.Bind(freshPkg, installCount, downloadCount, isBookmarked, showBookmark, isInstalled);
 					}
 
 					break;
@@ -1503,12 +1516,21 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var pkg = card.Package;
 			if (pkg == null) return;
 
+			var packageId = pkg.id;
 			card.SetDownloading(true);
 			ProjectDownloader.Download(pkg, (success, error, _) =>
 			{
 				card.SetDownloading(false);
 
-				if (!success && !string.IsNullOrEmpty(error) && error != "Cancelled.")
+				if (success)
+				{
+					// Optimistically bump the local count; server has already
+					// recorded the download via /track-download.
+					_downloadCounts.TryGetValue(packageId, out var currentCount);
+					_downloadCounts[packageId] = currentCount + 1;
+					card.UpdateInstallCount(currentCount + 1);
+				}
+				else if (!string.IsNullOrEmpty(error) && error != "Cancelled.")
 				{
 					Debug.LogError($"[PkgLnk] Failed to download {pkg.display_name}: {error}");
 				}

@@ -190,7 +190,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		/// <summary>
 		/// Populates the detail view with package data and shows it.
 		/// </summary>
-		public void Show(PackageData pkg, int installCount)
+		public void Show(PackageData pkg, int installCount, int downloadCount)
 		{
 			_currentPackage = pkg;
 			_errorLabel.style.display = DisplayStyle.None;
@@ -223,7 +223,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_platformLabel.text = pkg.git_platform;
 			_ownerLabel.text = $"{pkg.git_owner}/{pkg.git_repo}";
 
-			_installCountLabel.text = $"{FormatUtils.FormatCount(installCount)} installs";
+			var isProject = pkg.listing_type == "project";
+			var statCount = isProject ? downloadCount : installCount;
+			var statNoun = isProject ? "downloads" : "installs";
+			_installCountLabel.text = $"{FormatUtils.FormatCount(statCount)} {statNoun}";
 			_starsLabel.text = pkg.github_stars > 0 ? $"{FormatUtils.FormatCount(pkg.github_stars)} stars" : string.Empty;
 			_starsLabel.style.display = pkg.github_stars > 0 ? DisplayStyle.Flex : DisplayStyle.None;
 			_updatedLabel.text = $"Updated {DateUtils.FormatRelative(pkg.updated_at)}";

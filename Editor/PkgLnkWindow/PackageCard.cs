@@ -73,7 +73,6 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private bool _isGhost = true;
 		private bool _isProject;
 		private bool _isDownloading;
-		private string _boundProjectVersion;
 		private int _imageRecheckAttempts;
 		private IVisualElementScheduledItem _imageRecheckTask;
 
@@ -352,7 +351,6 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_boundOwner = null;
 			_boundRepo = null;
 			_boundInstallCount = -1;
-			_boundProjectVersion = null;
 			_boundHasDesc = false;
 			_boundShowBookmark = false;
 			_isInstalled = false;
@@ -370,7 +368,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		/// Binds to package data. Zero DOM allocations — only text/style updates.
 		/// Accepts pre-computed installed state to avoid per-card lookups during scroll.
 		/// </summary>
-		public void Bind(PackageData pkg, int installCount, bool isBookmarked, bool showBookmark, bool isInstalled)
+		public void Bind(PackageData pkg, int installCount, int downloadCount, bool isBookmarked, bool showBookmark, bool isInstalled)
 		{
 			if (_isGhost)
 			{
@@ -476,19 +474,22 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_platformIcon.style.backgroundImage = new StyleBackground(TabIcons.GetPlatformIcon(pkg.git_platform));
 			}
 
-			// Project cards reuse the right chamber to show the target Unity
-			// version instead of the install count.
+			// Project cards reuse the right chamber to show the download count
+			// (analogous to install count for packages); packages use install count.
 			var wasProject = _isProject;
 			_isProject = pkg.listing_type == "project";
 
+			var rightChamberCount = _isProject ? downloadCount : installCount;
+			if (rightChamberCount != _boundInstallCount)
+			{
+				_boundInstallCount = rightChamberCount;
+				_installCountLabel.text = rightChamberCount > 0
+					? FormatUtils.FormatCount(rightChamberCount)
+					: "0";
+			}
+
 			if (_isProject)
 			{
-				var version = string.IsNullOrEmpty(pkg.project_unity_version) ? "—" : pkg.project_unity_version;
-				if (version != _boundProjectVersion)
-				{
-					_boundProjectVersion = version;
-					_installCountLabel.text = version;
-				}
 				// Force a button-display refresh on type flip so a pooled card
 				// that was previously bound to a package switches to Download.
 				if (!wasProject)
@@ -498,14 +499,6 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			}
 			else
 			{
-				if (installCount != _boundInstallCount)
-				{
-					_boundInstallCount = installCount;
-					_installCountLabel.text = installCount > 0
-						? FormatUtils.FormatCount(installCount)
-						: "0";
-				}
-
 				// Install state — skip redundant class/style changes
 				if (wasProject || _isInstalled != isInstalled)
 				{
@@ -538,6 +531,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		public void UpdateInstallCount(int installCount)
 		{
+			_boundInstallCount = installCount;
 			_installCountLabel.text = installCount > 0
 				? FormatUtils.FormatCount(installCount)
 				: "0";
