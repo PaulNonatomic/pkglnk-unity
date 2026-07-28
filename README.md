@@ -77,6 +77,12 @@ Browser-based OAuth authentication through pkglnk.dev. Sign in with GitHub, GitL
 
 <img width="863" height="760" alt="OAuth sign-in modal for GitHub, GitLab, and Bitbucket authentication" src="https://github.com/user-attachments/assets/d5c3275f-9f71-4171-a7af-8f221337fc93" />
 
+### Language
+
+English and Simplified Chinese (简体中文) are bundled. A **Language** dropdown in the header switches at runtime; selection is persisted per-user via `EditorPrefs` and auto-detects from `Application.systemLanguage` on first launch. Missing translations transparently fall back to English.
+
+To add a new locale: copy `Editor/Localization/en.json` to `Editor/Localization/<locale>.json`, translate the values (keep `{0}` / `{1}` placeholders in place), and register the code in `AvailableLocales` / `LocaleDisplayNames` in `Editor/Localization/L10n.cs`. PRs welcome.
+
 ## Usage
 
 Open the window via the menu:

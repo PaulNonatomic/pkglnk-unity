@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0] - 2026-04-29
+
+### Added
+- **Localization support** — Simplified Chinese (zh-Hans) shipped alongside English. Locale picker in the header (`Language` dropdown) persists selection in `EditorPrefs` (`PkgLnk.Locale`) and auto-detects `Application.systemLanguage` on first launch. Missing keys fall back to English, so partial translations are safe.
+- New `Editor/Localization/L10n.cs` static helper — flat `{key: value}` JSON tables under `Editor/Localization/{locale}.json`, `Get(key)` / `Format(key, args)` API, `OnLocaleChanged` event.
+- `PkgLnkWindow` rebuilds its visual tree on locale change so newly-fetched translations take effect immediately without an editor restart.
+- CJK-capable OS font (Microsoft YaHei / PingFang SC / Noto Sans CJK) auto-applied to the root when a CJK locale is active, so Chinese glyphs don't render as tofu on Editors whose bundled font lacks CJK coverage.
+- `L10n.Format` for parameterised strings (e.g. `"Error: {0}"`).
+
+### Coverage
+Extracted this release: header + tabs + toggles + login modal + empty-state / status messages + filter dropdown + package card buttons/tooltips/phase text. Detail views, forms, install-confirm windows, and background-Progress descriptions still render in English — they'll be extracted in v0.13.1. Missing keys silently fall back to English so no strings render blank.
+
+### Translation quality
+The `zh-Hans.json` bundled here is a machine-translation pass using standard Chinese software-UI conventions (安装 / 下载 / 收藏 / 集合, halfwidth punctuation on terse labels, fullwidth on prose). Native-speaker review welcome — file: `Editor/Localization/zh-Hans.json`.
+
+### Adding a new locale
+1. Copy `Editor/Localization/en.json` to `Editor/Localization/<locale>.json`.
+2. Translate the values (keep the `{0}` / `{1}` placeholders in place).
+3. Add the locale code to `AvailableLocales` in `Editor/Localization/L10n.cs`, plus a display name in `LocaleDisplayNames`.
+
 ## [0.12.0] - 2026-04-29
 
 ### Added

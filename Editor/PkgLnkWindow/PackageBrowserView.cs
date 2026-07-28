@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
 using Nonatomic.PkgLnk.Editor.Api;
+using Nonatomic.PkgLnk.Editor.Localization;
 using Nonatomic.PkgLnk.Editor.Utils;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.PackageManager;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -191,7 +194,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			brandRow.Add(brandLabel);
 
 			var installedVersion = VersionUtils.GetInstalledVersion();
-			_versionLabel = new Label(!string.IsNullOrEmpty(installedVersion) ? $"v{installedVersion}" : string.Empty);
+			_versionLabel = new Label(!string.IsNullOrEmpty(installedVersion) ? L10n.Format("header.version.installed", installedVersion) : string.Empty);
 			_versionLabel.AddToClassList("header-version");
 			brandRow.Add(_versionLabel);
 			CheckForUpdate(installedVersion);
@@ -200,8 +203,21 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_authRow.AddToClassList("header-auth-row");
 			headerBar.Add(_authRow);
 
+			// Locale picker — lives left of sign-in so it's always reachable
+			// regardless of auth state. Uses native PopupField for a compact,
+			// familiar editor dropdown.
+			var localePicker = new PopupField<string>(
+				L10n.AvailableLocales.ToList(),
+				L10n.CurrentLocale,
+				loc => L10n.LocaleDisplayNames.TryGetValue(loc, out var n) ? n : loc,
+				loc => L10n.LocaleDisplayNames.TryGetValue(loc, out var n) ? n : loc);
+			localePicker.tooltip = L10n.Get("locale.picker.tooltip");
+			localePicker.AddToClassList("locale-picker");
+			localePicker.RegisterValueChangedCallback(evt => L10n.SetLocale(evt.newValue));
+			_authRow.Add(localePicker);
+
 			_signInButton = new Button(OnSignInClicked);
-			_signInButton.text = "Sign In";
+			_signInButton.text = L10n.Get("header.button.sign_in");
 			_signInButton.AddToClassList("sign-in-button");
 			_authRow.Add(_signInButton);
 
@@ -229,18 +245,18 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_profileDropdown.style.display = DisplayStyle.None;
 
 			_accountButton = new Button(OnAccountClicked);
-			_accountButton.text = "Account";
+			_accountButton.text = L10n.Get("header.profile.account");
 			_accountButton.AddToClassList("profile-dropdown-item");
 			_profileDropdown.Add(_accountButton);
 
 			_starOnGitHubButton = new Button(OnStarOnGitHubClicked);
-			_starOnGitHubButton.text = "\u2605  Star on GitHub";
+			_starOnGitHubButton.text = L10n.Get("header.profile.star_github");
 			_starOnGitHubButton.AddToClassList("profile-dropdown-item");
 			_starOnGitHubButton.AddToClassList("profile-dropdown-item-star");
 			_profileDropdown.Add(_starOnGitHubButton);
 
 			_signOutButton = new Button(OnSignOutClicked);
-			_signOutButton.text = "Sign Out";
+			_signOutButton.text = L10n.Get("header.profile.sign_out");
 			_signOutButton.AddToClassList("profile-dropdown-item");
 			_signOutButton.AddToClassList("profile-dropdown-item-danger");
 			_profileDropdown.Add(_signOutButton);
@@ -253,16 +269,16 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			var bookmarkTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
 				"Packages/com.nonatomic.pkglnk/Editor/Icons/bookmark-outline.png");
 
-			_browseTab = CreateTabButton("Directory", TabIcons.Compass, () => SwitchTab(BrowseTab.Browse));
+			_browseTab = CreateTabButton(L10n.Get("tab.directory"), TabIcons.Compass, () => SwitchTab(BrowseTab.Browse));
 			tabBar.Add(_browseTab);
 
-			_collectionsTab = CreateTabButton("Collections", TabIcons.Folder, () => SwitchTab(BrowseTab.Collections));
+			_collectionsTab = CreateTabButton(L10n.Get("tab.collections"), TabIcons.Folder, () => SwitchTab(BrowseTab.Collections));
 			tabBar.Add(_collectionsTab);
 
-			_bookmarksTab = CreateTabButton("Bookmarks", bookmarkTex, () => SwitchTab(BrowseTab.Bookmarks));
+			_bookmarksTab = CreateTabButton(L10n.Get("tab.bookmarks"), bookmarkTex, () => SwitchTab(BrowseTab.Bookmarks));
 			tabBar.Add(_bookmarksTab);
 
-			_myPackagesTab = CreateTabButton("My Packages", TabIcons.Grid, () => SwitchTab(BrowseTab.MyPackages));
+			_myPackagesTab = CreateTabButton(L10n.Get("tab.my_packages"), TabIcons.Grid, () => SwitchTab(BrowseTab.MyPackages));
 			tabBar.Add(_myPackagesTab);
 
 			// Toolbar row (search + filter)
@@ -302,17 +318,17 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_listView.Add(_collectionToggleRow);
 
 			_allCollectionsButton = new Button(() => SwitchCollectionMode(CollectionViewMode.All));
-			_allCollectionsButton.text = "All";
+			_allCollectionsButton.text = L10n.Get("collections.toggle.all");
 			_allCollectionsButton.AddToClassList("toggle-button");
 			_collectionToggleRow.Add(_allCollectionsButton);
 
 			_myCollectionsButton = new Button(() => SwitchCollectionMode(CollectionViewMode.Mine));
-			_myCollectionsButton.text = "Mine";
+			_myCollectionsButton.text = L10n.Get("collections.toggle.mine");
 			_myCollectionsButton.AddToClassList("toggle-button");
 			_collectionToggleRow.Add(_myCollectionsButton);
 
 			_createCollectionButton = new Button(OnCreateCollectionClicked);
-			_createCollectionButton.text = "+ Create";
+			_createCollectionButton.text = L10n.Get("collections.button.create");
 			_createCollectionButton.AddToClassList("create-collection-button");
 			_createCollectionButton.style.display = DisplayStyle.None;
 			_collectionToggleRow.Add(_createCollectionButton);
@@ -324,12 +340,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_listView.Add(_listingTypeRow);
 
 			_packagesToggleButton = new Button(() => SwitchListingType("package"));
-			_packagesToggleButton.text = "Packages";
+			_packagesToggleButton.text = L10n.Get("directory.toggle.packages");
 			_packagesToggleButton.AddToClassList("toggle-button");
 			_listingTypeRow.Add(_packagesToggleButton);
 
 			_projectsToggleButton = new Button(() => SwitchListingType("project"));
-			_projectsToggleButton.text = "Projects";
+			_projectsToggleButton.text = L10n.Get("directory.toggle.projects");
 			_projectsToggleButton.AddToClassList("toggle-button");
 			_listingTypeRow.Add(_projectsToggleButton);
 
@@ -400,7 +416,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			loginCard.AddToClassList("login-card");
 			_loginOverlay.Add(loginCard);
 
-			var loginTitle = new Label("Sign in required");
+			var loginTitle = new Label(L10n.Get("login_modal.title"));
 			loginTitle.AddToClassList("login-card-title");
 			loginCard.Add(loginTitle);
 
@@ -409,12 +425,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			loginCard.Add(_loginMessage);
 
 			_loginButton = new Button(OnLoginModalSignIn);
-			_loginButton.text = "Sign In";
+			_loginButton.text = L10n.Get("login_modal.button.sign_in");
 			_loginButton.AddToClassList("login-card-button");
 			loginCard.Add(_loginButton);
 
 			var cancelButton = new Button(DismissLoginModal);
-			cancelButton.text = "Cancel";
+			cancelButton.text = L10n.Get("login_modal.button.cancel");
 			cancelButton.AddToClassList("login-card-cancel");
 			loginCard.Add(cancelButton);
 
@@ -485,8 +501,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				var latestVersion = VersionUtils.StripPrefix(latestTag);
 				if (!VersionUtils.IsNewer(latestVersion, installedVersion)) return;
 
-				_versionLabel.text = $"v{installedVersion} \u2192 v{latestVersion}";
-				_versionLabel.tooltip = $"Click to update to v{latestVersion}";
+				_versionLabel.text = L10n.Format("header.version.update_available", installedVersion, latestVersion);
+				_versionLabel.tooltip = L10n.Format("header.version.update_tooltip", latestVersion);
 				_versionLabel.AddToClassList("header-version-update");
 				_versionLabel.RegisterCallback<ClickEvent>(_ => TriggerUpdate(latestTag));
 			});
@@ -494,7 +510,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 		private void TriggerUpdate(string versionTag)
 		{
-			_versionLabel.text = "Updating...";
+			_versionLabel.text = L10n.Get("header.version.updating");
 			_versionLabel.tooltip = string.Empty;
 			_versionLabel.SetEnabled(false);
 
@@ -518,7 +534,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				}
 				else
 				{
-					_versionLabel.text = "Update failed";
+					_versionLabel.text = L10n.Get("header.version.update_failed");
 				}
 
 				_versionLabel.SetEnabled(true);
@@ -599,12 +615,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private void OnSignInClicked()
 		{
 			_signInButton.SetEnabled(false);
-			_signInButton.text = "Signing in...";
+			_signInButton.text = L10n.Get("header.button.signing_in");
 
 			PkgLnkAuth.Login((success, error) =>
 			{
 				_signInButton.SetEnabled(true);
-				_signInButton.text = "Sign In";
+				_signInButton.text = L10n.Get("header.button.sign_in");
 
 				if (!success)
 				{
@@ -724,11 +740,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_pendingTab = tab;
 			_loginMessage.text = tab switch
 			{
-				BrowseTab.Bookmarks => "Sign in to access your bookmarks.",
-				BrowseTab.Collections => "Sign in to manage your collections.",
-				_ => "Sign in to access your packages."
+				BrowseTab.Bookmarks => L10n.Get("login_modal.message.bookmarks"),
+				BrowseTab.Collections => L10n.Get("login_modal.message.collections"),
+				_ => L10n.Get("login_modal.message.default")
 			};
-			_loginButton.text = "Sign In";
+			_loginButton.text = L10n.Get("login_modal.button.sign_in");
 			_loginButton.SetEnabled(true);
 			_loginOverlay.style.display = DisplayStyle.Flex;
 		}
@@ -741,12 +757,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		private void OnLoginModalSignIn()
 		{
 			_loginButton.SetEnabled(false);
-			_loginButton.text = "Signing in...";
+			_loginButton.text = L10n.Get("header.button.signing_in");
 
 			PkgLnkAuth.Login((success, error) =>
 			{
 				_loginButton.SetEnabled(true);
-				_loginButton.text = "Sign In";
+				_loginButton.text = L10n.Get("login_modal.button.sign_in");
 
 				if (success)
 				{
@@ -1062,7 +1078,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					if (!PkgLnkAuth.IsLoggedIn)
 					{
 						_isFetching = false;
-						ShowStatus("Sign in to see your bookmarks.");
+						ShowStatus(L10n.Get("status.bookmarks.signin_required"));
 						return;
 					}
 					PkgLnkApiClient.FetchBookmarks(
@@ -1074,7 +1090,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 					if (!PkgLnkAuth.IsLoggedIn)
 					{
 						_isFetching = false;
-						ShowStatus("Sign in to see your packages.");
+						ShowStatus(L10n.Get("status.my_packages.signin_required"));
 						return;
 					}
 					PkgLnkApiClient.FetchUserPackages(
@@ -1091,14 +1107,14 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (error != null)
 			{
 				HideAllPoolCards();
-				ShowStatus($"Error: {error}");
+				ShowStatus(L10n.Format("status.error", error));
 				return;
 			}
 
 			if (response == null)
 			{
 				HideAllPoolCards();
-				ShowStatus("No response received.");
+				ShowStatus(L10n.Get("status.no_response"));
 				return;
 			}
 
@@ -1131,10 +1147,10 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				HideAllPoolCards();
 				var emptyMessage = _activeTab switch
 				{
-					BrowseTab.Browse => _listingType == "project" ? "No projects found." : "No packages found.",
-					BrowseTab.Bookmarks => "No bookmarked packages.",
-					BrowseTab.MyPackages => "No packages found.",
-					_ => "No packages found."
+					BrowseTab.Browse => _listingType == "project" ? L10n.Get("status.empty.projects") : L10n.Get("status.empty.packages"),
+					BrowseTab.Bookmarks => L10n.Get("status.empty.bookmarks"),
+					BrowseTab.MyPackages => L10n.Get("status.empty.packages"),
+					_ => L10n.Get("status.empty.packages")
 				};
 				ShowStatus(emptyMessage);
 				_cardContainer.style.height = 0;
@@ -1607,8 +1623,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			{
 				HideAllPoolCards();
 				ShowStatus(hasQuery && !_filterState.HasActiveFilters
-					? "No packages match your search."
-					: "No packages match the current filters.");
+					? L10n.Get("status.no_search_match.packages")
+					: L10n.Get("status.no_filter_match"));
 				_cardContainer.style.height = 0;
 			}
 			else if (_filteredPackages.Count > 0)
@@ -1797,14 +1813,14 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (error != null)
 			{
 				HideAllCollectionPoolCards();
-				ShowStatus($"Error: {error}");
+				ShowStatus(L10n.Format("status.error", error));
 				return;
 			}
 
 			if (response == null)
 			{
 				HideAllCollectionPoolCards();
-				ShowStatus("No response received.");
+				ShowStatus(L10n.Get("status.no_response"));
 				return;
 			}
 
@@ -1821,7 +1837,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (_allCollections.Count == 0)
 			{
 				HideAllCollectionPoolCards();
-				ShowStatus("No collections found.");
+				ShowStatus(L10n.Get("status.empty.collections"));
 				_cardContainer.style.height = 0;
 				return;
 			}
@@ -1847,7 +1863,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			if (_filteredCollections.Count == 0 && _allCollections.Count > 0 && hasQuery)
 			{
 				HideAllCollectionPoolCards();
-				ShowStatus("No collections match your search.");
+				ShowStatus(L10n.Get("status.no_search_match.collections"));
 				_cardContainer.style.height = 0;
 			}
 			else if (_filteredCollections.Count > 0)
@@ -2090,11 +2106,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 					if (error.StartsWith("403"))
 					{
-						ShowStatus("Token needs refreshed permissions. Please sign out and sign in again.");
+						ShowStatus(L10n.Get("status.token_stale"));
 					}
 					else
 					{
-						ShowStatus($"Error: {error}");
+						ShowStatus(L10n.Format("status.error", error));
 					}
 					return;
 				}
@@ -2102,7 +2118,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				if (response == null || response.collections == null)
 				{
 					HideAllCollectionPoolCards();
-					ShowStatus("No response received.");
+					ShowStatus(L10n.Get("status.no_response"));
 					return;
 				}
 
@@ -2119,7 +2135,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				if (_allCollections.Count == 0)
 				{
 					HideAllCollectionPoolCards();
-					ShowStatus("No collections yet. Create one to get started!");
+					ShowStatus(L10n.Get("status.empty.my_collections"));
 					_cardContainer.style.height = 0;
 					return;
 				}
@@ -2164,11 +2180,11 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				{
 					if (error.StartsWith("403"))
 					{
-						_collectionDetailView.ShowError("Token needs refreshed permissions. Please sign out and sign in again.");
+						_collectionDetailView.ShowError(L10n.Get("status.token_stale"));
 					}
 					else
 					{
-						_collectionDetailView.ShowError($"Failed to delete: {error}");
+						_collectionDetailView.ShowError(L10n.Format("status.collection.delete_failed", error));
 					}
 					return;
 				}
@@ -2196,7 +2212,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				{
 					if (error != null)
 					{
-						_collectionDetailView.ShowError($"Failed to remove package: {error}");
+						_collectionDetailView.ShowError(L10n.Format("status.collection.remove_failed", error));
 						return;
 					}
 
