@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Nonatomic.PkgLnk.Editor.Localization;
 using UnityEngine.UIElements;
 
 namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
@@ -50,12 +51,12 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			header.AddToClassList("filter-dropdown-header");
 			Add(header);
 
-			var title = new Label("Filters");
+			var title = new Label(L10n.Get("filter.title"));
 			title.AddToClassList("filter-dropdown-title");
 			header.Add(title);
 
 			var clearButton = new Button(OnClearAll);
-			clearButton.text = "Clear All";
+			clearButton.text = L10n.Get("filter.button.clear_all");
 			clearButton.AddToClassList("filter-clear-button");
 			header.Add(clearButton);
 
@@ -70,58 +71,58 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			Add(scrollView);
 
 			// Install Status
-			var installSection = CreateSection("Install Status");
+			var installSection = CreateSection(L10n.Get("filter.section.install_status"));
 			scrollView.Add(installSection);
 
 			var installRow = new VisualElement();
 			installRow.AddToClassList("filter-chip-row");
 			installSection.Add(installRow);
 
-			_installAll = CreateChip("All", installRow, () => SetInstall(InstallFilter.All));
-			_installInstalled = CreateChip("Installed", installRow, () => SetInstall(InstallFilter.Installed));
-			_installNotInstalled = CreateChip("Not Installed", installRow, () => SetInstall(InstallFilter.NotInstalled));
+			_installAll = CreateChip(L10n.Get("filter.install_status.all"), installRow, () => SetInstall(InstallFilter.All));
+			_installInstalled = CreateChip(L10n.Get("filter.install_status.installed"), installRow, () => SetInstall(InstallFilter.Installed));
+			_installNotInstalled = CreateChip(L10n.Get("filter.install_status.not_installed"), installRow, () => SetInstall(InstallFilter.NotInstalled));
 
 			// Bookmark Status
-			_bookmarkSection = CreateSection("Bookmark Status");
+			_bookmarkSection = CreateSection(L10n.Get("filter.section.bookmark"));
 			scrollView.Add(_bookmarkSection);
 
 			var bookmarkRow = new VisualElement();
 			bookmarkRow.AddToClassList("filter-chip-row");
 			_bookmarkSection.Add(bookmarkRow);
 
-			_bookmarkAll = CreateChip("All", bookmarkRow, () => SetBookmark(BookmarkFilter.All));
-			_bookmarkBookmarked = CreateChip("Bookmarked", bookmarkRow, () => SetBookmark(BookmarkFilter.Bookmarked));
-			_bookmarkNotBookmarked = CreateChip("Not Bookmarked", bookmarkRow, () => SetBookmark(BookmarkFilter.NotBookmarked));
+			_bookmarkAll = CreateChip(L10n.Get("filter.bookmark.all"), bookmarkRow, () => SetBookmark(BookmarkFilter.All));
+			_bookmarkBookmarked = CreateChip(L10n.Get("filter.bookmark.bookmarked"), bookmarkRow, () => SetBookmark(BookmarkFilter.Bookmarked));
+			_bookmarkNotBookmarked = CreateChip(L10n.Get("filter.bookmark.not_bookmarked"), bookmarkRow, () => SetBookmark(BookmarkFilter.NotBookmarked));
 
-			_bookmarkHint = new Label("Sign in to filter by bookmarks");
+			_bookmarkHint = new Label(L10n.Get("filter.bookmark.signin_hint"));
 			_bookmarkHint.AddToClassList("filter-section-hint");
 			_bookmarkHint.style.display = DisplayStyle.None;
 			_bookmarkSection.Add(_bookmarkHint);
 
 			// Platform
-			var platformSection = CreateSection("Platform");
+			var platformSection = CreateSection(L10n.Get("filter.section.platform"));
 			scrollView.Add(platformSection);
 
 			_platformChipRow = new VisualElement();
 			_platformChipRow.AddToClassList("filter-chip-row");
 			platformSection.Add(_platformChipRow);
 
-			_platformAll = CreateChip("All", _platformChipRow, () => SetPlatform(string.Empty));
+			_platformAll = CreateChip(L10n.Get("filter.platform.all"), _platformChipRow, () => SetPlatform(string.Empty));
 
 			// Visibility
-			var visibilitySection = CreateSection("Visibility");
+			var visibilitySection = CreateSection(L10n.Get("filter.section.visibility"));
 			scrollView.Add(visibilitySection);
 
 			var visibilityRow = new VisualElement();
 			visibilityRow.AddToClassList("filter-chip-row");
 			visibilitySection.Add(visibilityRow);
 
-			_visibilityAll = CreateChip("All", visibilityRow, () => SetVisibility(VisibilityFilter.All));
-			_visibilityPublic = CreateChip("Public", visibilityRow, () => SetVisibility(VisibilityFilter.Public));
-			_visibilityPrivate = CreateChip("Private", visibilityRow, () => SetVisibility(VisibilityFilter.Private));
+			_visibilityAll = CreateChip(L10n.Get("filter.visibility.all"), visibilityRow, () => SetVisibility(VisibilityFilter.All));
+			_visibilityPublic = CreateChip(L10n.Get("filter.visibility.public"), visibilityRow, () => SetVisibility(VisibilityFilter.Public));
+			_visibilityPrivate = CreateChip(L10n.Get("filter.visibility.private"), visibilityRow, () => SetVisibility(VisibilityFilter.Private));
 
 			// Topics
-			_topicSection = CreateSection("Topics");
+			_topicSection = CreateSection(L10n.Get("filter.section.topics"));
 			scrollView.Add(_topicSection);
 
 			_topicChipRow = new VisualElement();

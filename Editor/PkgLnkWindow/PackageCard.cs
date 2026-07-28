@@ -1,5 +1,6 @@
 using System;
 using Nonatomic.PkgLnk.Editor.Api;
+using Nonatomic.PkgLnk.Editor.Localization;
 using Nonatomic.PkgLnk.Editor.Utils;
 using UnityEditor;
 using UnityEngine;
@@ -166,7 +167,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 				_onBookmarkClicked?.Invoke(this);
 			});
 			_bookmarkButton.text = string.Empty;
-			_bookmarkButton.tooltip = "Bookmark";
+			_bookmarkButton.tooltip = L10n.Get("card.tooltip.bookmark");
 			_bookmarkButton.AddToClassList("bookmark-button");
 			_bookmarkButton.style.display = DisplayStyle.None;
 			_bookmarkButton.RegisterCallback<ClickEvent>(evt => evt.StopPropagation());
@@ -253,7 +254,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			_installButton = new Button(() => _onInstallClicked?.Invoke(this));
 			_installButton.text = string.Empty;
-			_installButton.tooltip = "Install";
+			_installButton.tooltip = L10n.Get("card.tooltip.install");
 			_installButton.AddToClassList("install-button");
 			footer.Add(_installButton);
 
@@ -283,7 +284,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			}
 			_installButtonLabel.Add(_installButtonIcon);
 
-			_installButtonText = new Label("Install");
+			_installButtonText = new Label(L10n.Get("card.button.install"));
 			_installButtonText.AddToClassList("install-button-text");
 			_installButtonText.pickingMode = PickingMode.Ignore;
 			_installButtonLabel.Add(_installButtonText);
@@ -435,7 +436,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			// Description — guard class change to avoid USS recalc
 			var hasDesc = !string.IsNullOrEmpty(pkg.description);
-			_descLabel.text = hasDesc ? pkg.description : "No description";
+			_descLabel.text = hasDesc ? pkg.description : L10n.Get("card.description.empty");
 			if (hasDesc != _boundHasDesc)
 			{
 				_boundHasDesc = hasDesc;
@@ -555,7 +556,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 		{
 			if (installing)
 			{
-				_installButtonText.text = "Installing...";
+				_installButtonText.text = L10n.Get("card.button.installing");
 				_installButton.SetEnabled(false);
 				_installButton.RemoveFromClassList("installed-button");
 				_installButtonIcon.style.display = DisplayStyle.None;
@@ -575,17 +576,17 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			switch (phase)
 			{
 				case InstallPhase.Resolving:
-					_installButtonText.text = "Resolving...";
+					_installButtonText.text = L10n.Get("card.phase.resolving");
 					_installButtonIcon.style.display = DisplayStyle.None;
 					_installCountLabel.style.display = DisplayStyle.None;
 					break;
 				case InstallPhase.Downloading:
-					_installButtonText.text = "Downloading...";
+					_installButtonText.text = L10n.Get("card.phase.downloading");
 					_installButtonIcon.style.display = DisplayStyle.None;
 					_installCountLabel.style.display = DisplayStyle.None;
 					break;
 				case InstallPhase.Importing:
-					_installButtonText.text = "Importing...";
+					_installButtonText.text = L10n.Get("card.phase.importing");
 					_installButtonIcon.style.display = DisplayStyle.None;
 					_installCountLabel.style.display = DisplayStyle.None;
 					break;
@@ -611,8 +612,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			// state — projects download as archives, they aren't UPM-tracked.
 			if (_isProject)
 			{
-				_installButtonText.text = "Download";
-				_installButton.tooltip = "Download project";
+				_installButtonText.text = L10n.Get("card.button.download");
+				_installButton.tooltip = L10n.Get("card.tooltip.download");
 				_installButton.SetEnabled(!_isDownloading);
 				_installButton.RemoveFromClassList("installed-button");
 				if (_downloadTex != null)
@@ -626,8 +627,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 
 			if (_isInstalled)
 			{
-				_installButtonText.text = "Installed";
-				_installButton.tooltip = "Installed";
+				_installButtonText.text = L10n.Get("card.button.installed");
+				_installButton.tooltip = L10n.Get("card.tooltip.installed");
 				_installButton.SetEnabled(false);
 				_installButton.AddToClassList("installed-button");
 				if (_checkTex != null)
@@ -639,8 +640,8 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			}
 			else
 			{
-				_installButtonText.text = "Install";
-				_installButton.tooltip = "Install";
+				_installButtonText.text = L10n.Get("card.button.install");
+				_installButton.tooltip = L10n.Get("card.tooltip.install");
 				_installButton.SetEnabled(true);
 				_installButton.RemoveFromClassList("installed-button");
 				if (_downloadTex != null)
@@ -662,7 +663,7 @@ namespace Nonatomic.PkgLnk.Editor.PkgLnkWindow
 			_isDownloading = downloading;
 			if (downloading)
 			{
-				_installButtonText.text = "Downloading...";
+				_installButtonText.text = L10n.Get("card.button.downloading");
 				_installButton.SetEnabled(false);
 				_installButtonIcon.style.display = DisplayStyle.None;
 				_installCountLabel.style.display = DisplayStyle.None;
